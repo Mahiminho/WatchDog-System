@@ -31,11 +31,11 @@ float Light::readLux() { // return light intensity in lux
 }
 
 /*
-  0-10 люксів: дуже темно (наприклад, вночі або в затемненому приміщенні без освітлення).
-  10-100 люксів: низький рівень освітленості (наприклад, ввечері, коли сонце тільки заходить).
-  100-500 люксів: типове приміщення з невеликим освітленням (офіс або кімната з лампами).
-  500-1000 люксів: добре освітлене приміщення (наприклад, кімната з хорошим освітленням).
-  1000-2000 люксів: яскраве освітлення (наприклад, на робочому столі з хорошим природним або штучним освітленням).
-  2000-10000 люксів: дуже яскраве освітлення (на вулиці в сонячний день).
-  >10000 люксів: дуже яскраво (пряме сонячне світло).
+  0-10 lux: Very dark (e.g., at night or in a dimly lit room without lighting).
+  10-100 lux: Low light levels (e.g., during evening hours when the sun is setting).
+  100-500 lux: Typical indoor lighting (e.g., an office or room with minimal lighting).
+  500-1000 lux: Well-lit indoor environment (e.g., a room with good artificial lighting).
+  1000-2000 lux: Bright lighting (e.g., a workspace with strong natural or artificial light).
+  2000-10000 lux: Very bright lighting (e.g., outdoors on a sunny day).
+  >10000 lux: Extremely bright (e.g., direct sunlight).
 */
