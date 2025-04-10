@@ -1,11 +1,5 @@
 #include <Arduino.h>
-#include <Thermometer.h>
-#include <AirQuality.h>
-#include <Light.h>
-#include <HumanPresence.h>
-#include <MotionDetection.h>
-#include <Audio.h>
-#include <VibrationDetection.h>
+#include <SensorsData.h>
 
 #define THERMOMETER_PIN 4
 #define AIR_QUALITY_PIN 34
@@ -17,33 +11,36 @@
 #define AUDIO_PIN 32
 #define VIBRATION_DETECTION_PIN 12
 
-Thermometer thermometer(THERMOMETER_PIN);
-AirQuality airQuality(AIR_QUALITY_PIN);
-Light light(LIGHT_ADDRESS, LIGHT_SDA_PIN, LIGHT_SCL_PIN);
-HumanPresence humanPresence(HUMAN_PRESENCE_PIN);
-MoveDetection motionDetection(MOTION_DETECTION_PIN);
-Audio audio(AUDIO_PIN);
-VibrationDetection vibrationDetection(VIBRATION_DETECTION_PIN);
+// TODO:
+// 1) Class for fire detection with sensor fusion alghorithms
+// 2) Class for gas type (?) detection with sensor fusion alghorithms
+// 3) Class for people detection
+// 4) Class for damage detection
+// 5) Class for work with JSON: create JSON with sensors data + parse JSON with instructions from server
+// 6) Class for work with MQTT: send JSON to server + receive JSON from server
+// 7) Execution class (?): lock, alarm (speaker + LED)
+// 8) Fill README files. Main file with instruction how to build, which sensors use, etc.
+// 9) Tests ???
+
+SensorsData sensors;
 
 void setup() {
   Serial.begin(9600);
-  thermometer.begin();
-  airQuality.begin();
-  light.begin();
-  humanPresence.begin();
-  motionDetection.begin();
-  audio.begin();
-  vibrationDetection.begin();
+  sensors.initSensors();
 }
 
 void loop() {
-  float temperatureCelsius = thermometer.getTemperature();
-  int airQualityPPM = airQuality.readPPM();
-  float lightIntensityLux = light.readLux();
-  bool presenceDetected = humanPresence.isPresent();
-  bool motionDetected = motionDetection.isMotionDetected();
-  float noiseLevelDB = audio.getNoiseLevel();
-  bool vibrationDetected = vibrationDetection.isVibrationDetected();
+  sensors.collectData();
+  SensorReadings readings = sensors.getData();
+
+  Serial.println("Temp: " + String(readings.temperatureCelsius) + " °C");
+  Serial.println("Air PPM: " + String(readings.airQualityPPM) + " PPM");
+  Serial.println("Light: " + String(readings.lightIntensityLux) + " Lux");
+  Serial.println("Presence: " + String(readings.presenceDetected ? "Yes" : "No"));
+  Serial.println("Motion: " + String(readings.motionDetected ? "Yes" : "No"));
+  Serial.println("Noise: " + String(readings.noiseLevelDB) + " dB");
+  Serial.println("Vibration: " + String(readings.vibrationDetected ? "Yes" : "No"));
+  Serial.println();
 
   delay(1000);
 }
