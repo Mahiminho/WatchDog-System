@@ -5,12 +5,12 @@
 
 class HumanPresence {
 public:
-  HumanPresence(uint8_t sensorPin = 27); // default pin is 27
+  HumanPresence(uint8_t sensorPresencePin = 27); // default pin is 27
   void begin();
   bool isPresent();
 
 private:
-  uint8_t m_sensorPin;
+  uint8_t m_sensorPresencePin;
 };
 
 #endif // HUMANPRESENCE_H

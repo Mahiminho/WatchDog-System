@@ -1,13 +1,18 @@
 #include "HumanPresence.h"
 
-HumanPresence::HumanPresence(uint8_t sensorPin) {
-  m_sensorPin = sensorPin;
+HumanPresence::HumanPresence(uint8_t sensorPresencePin) {
+  m_sensorPresencePin = sensorPresencePin;
 }
 
 void HumanPresence::begin() {
-  pinMode(m_sensorPin, INPUT);
+  Serial.println("Initializing human presence sensor...");
+  pinMode(m_sensorPresencePin, INPUT);
+  Serial.println("Human presence sensor initialized.\n");
 }
 
 bool HumanPresence::isPresent() {
-  return digitalRead(m_sensorPin) == HIGH;
+  Serial.println("Checking human presence...");
+  bool presenceDetected = digitalRead(m_sensorPresencePin) == HIGH;
+  Serial.println("Human presence checked.");
+  return presenceDetected;
 }

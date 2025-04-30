@@ -13,7 +13,7 @@
 typedef struct {
   float temperatureCelsius;
   int airQualityPPM;
-  float lightIntensityLux;
+  int lightIntensityLux;
   bool presenceDetected;
   bool motionDetected;
   float noiseLevelDB;

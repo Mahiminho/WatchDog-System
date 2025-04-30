@@ -1,16 +1,22 @@
 #include "Thermometer.h"
 
-Thermometer::Thermometer(uint8_t pin) : oneWire(pin), sensors(&oneWire) {
-  pinMode(pin, INPUT);
+Thermometer::Thermometer(uint8_t analogTempPin) : oneWire(analogTempPin), sensors(&oneWire) {
+  pinMode(analogTempPin, INPUT);
 }
 
 void Thermometer::begin() {
+  Serial.println("Initializing thermometer...");
   sensors.begin();
+  Serial.println("Thermometer initialized.\n");
 }
 
 float Thermometer::getTemperature() { // return temperature in Celsius
+  Serial.println("Requesting temperature...");
   sensors.requestTemperatures();
-  return sensors.getTempCByIndex(0);
+  float temperature = sensors.getTempCByIndex(0);
+  temperature = round(temperature * 100.0) / 100.0; // Limit to 2 decimal places
+  Serial.println("Temperature received.");
+  return temperature;
 }
 
 /*

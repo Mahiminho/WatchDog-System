@@ -5,12 +5,12 @@
 
 class VibrationDetection {
 public:
-  VibrationDetection(uint8_t sensorPin = 12); // default pin is 12
+  VibrationDetection(uint8_t vibrationSensorPin = 12); // default pin is 12
   void begin();
   bool isVibrationDetected();
 
 private:
-  uint8_t m_sensorPin;
+  uint8_t m_vibrationSensorPin;
 };
 
 #endif // VIBRATIONDETECTION_H

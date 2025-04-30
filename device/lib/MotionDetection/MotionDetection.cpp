@@ -1,13 +1,18 @@
 #include "MotionDetection.h"
 
-MoveDetection::MoveDetection(uint8_t sensorPin) {
-  m_sensorPin = sensorPin;
+MoveDetection::MoveDetection(uint8_t sensorMotionPin) {
+  m_sensorMotionPin = sensorMotionPin;
 }
 
 void MoveDetection::begin() {
-  pinMode(m_sensorPin, INPUT);
+  Serial.println("Initializing motion sensor...");
+  pinMode(m_sensorMotionPin, INPUT);
+  Serial.println("Motion sensor initialized.\n");
 }
 
 bool MoveDetection::isMotionDetected() {
-  return digitalRead(m_sensorPin) == HIGH;
+  Serial.println("Checking motion...");
+  bool motionDetected = digitalRead(m_sensorMotionPin) == HIGH;
+  Serial.println("Motion checked.");
+  return motionDetected;
 }

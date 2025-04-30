@@ -1,13 +1,18 @@
 #include "VibrationDetection.h"
 
-VibrationDetection::VibrationDetection(uint8_t sensorPin) {
-  m_sensorPin = sensorPin;
+VibrationDetection::VibrationDetection(uint8_t vibrationSensorPin) {
+  m_vibrationSensorPin = vibrationSensorPin;
 }
 
 void VibrationDetection::begin() {
-  pinMode(m_sensorPin, INPUT);
+  Serial.println("Initializing vibration sensor...");
+  pinMode(m_vibrationSensorPin, INPUT);
+  Serial.println("Vibration sensor initialized.\n");
 }
 
 bool VibrationDetection::isVibrationDetected() {
-  return digitalRead(m_sensorPin) == HIGH;
+  Serial.println("Checking vibration...");
+  bool vibrationDetected = digitalRead(m_vibrationSensorPin) == HIGH;
+  Serial.println("Vibration checked.\n");
+  return vibrationDetected;
 }

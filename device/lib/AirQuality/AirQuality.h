@@ -5,14 +5,13 @@
 
 class AirQuality {
 public:
-  AirQuality(uint8_t analogPin = 34); // default pin is 34
-
+  AirQuality(uint8_t analogAQPin = 34); // default pin is 34
   void begin();
   int readRaw();
   float readPPM();
 
 private:
-  uint8_t m_analogPin;
+  uint8_t m_analogAQPin;
   float m_ppmFromRaw(int raw);
 };
 

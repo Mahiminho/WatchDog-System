@@ -7,7 +7,7 @@
 
 class Thermometer {
 public:
-  Thermometer(uint8_t pin = 4); // default pin is 4
+  Thermometer(uint8_t analogTempPin = 4); // default pin is 4
   void begin();
   float getTemperature();
 

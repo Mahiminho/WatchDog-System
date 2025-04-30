@@ -1,24 +1,35 @@
 #include "AirQuality.h"
 
-AirQuality::AirQuality(uint8_t analogPin) {
-  m_analogPin = analogPin;
+AirQuality::AirQuality(uint8_t analogAQPin) {
+  m_analogAQPin = analogAQPin;
 }
 
 void AirQuality::begin() {
-  pinMode(m_analogPin, INPUT);
+  Serial.println("Initializing air quality sensor...");
+  pinMode(m_analogAQPin, INPUT);
+  Serial.println("Air quality sensor initialized.\n");
 }
 
 int AirQuality::readRaw() { // return raw ADC value (0-4095)
-  return analogRead(m_analogPin);
+  Serial.println("Reading raw value from analog pin...");
+  int rawValue = analogRead(m_analogAQPin);
+  Serial.println("Successfully read raw value.");
+  return rawValue;
 }
 
 float AirQuality::m_ppmFromRaw(int raw) { // convert raw ADC value to PPM (0-1000)
-  return map(raw, 0, 4095, 0, 1000);
+  Serial.println("Converting raw value to PPM...");
+  float ppm = map(raw, 0, 4095, 0, 1000);
+  Serial.println("Successfully converted raw value to PPM.");
+  return ppm;
 }
 
 float AirQuality::readPPM() { // return parts per million (parts of gas per million parts of air)
+  Serial.println("Getting PPM value...");
   int raw = readRaw();
-  return m_ppmFromRaw(raw);
+  float ppm = m_ppmFromRaw(raw);
+  Serial.println("Successfully got PPM value.");
+  return ppm;
 }
 
 /*

@@ -1,35 +1,47 @@
 #include "Audio.h"
 #include <math.h>
 
-Audio::Audio(uint8_t analogPin) {
-  m_analogPin = analogPin;
+Audio::Audio(uint8_t analogAudioPin) {
+  m_analogAudioPin = analogAudioPin;
 }
 
 void Audio::begin() {
-  pinMode(m_analogPin, INPUT);
+  Serial.println("Initializing audio sensor...");
+  pinMode(m_analogAudioPin, INPUT);
+  Serial.println("Audio sensor initialized.\n");
 }
 
 float Audio::computeRMS() { // сomputes the Root Mean Square (RMS) value of the signal; RMS is a measure of the average power of the signal
   const int samples = 1000; // number of samples to take
   unsigned long sum = 0;
 
+  Serial.println("Starting RMS computation...");
   for (int i = 0; i < samples; ++i) {
-    int16_t raw = analogRead(m_analogPin) - 2048; // center the signal around 0 (assuming ~2.5V reference)
+    int16_t raw = analogRead(m_analogAudioPin) - 2048; // center the signal around 0 (assuming ~2.5V reference)
     sum += raw * raw; // accumulate the square of the signal
     delayMicroseconds(50); // sampling frequency ~20kHz
   }
 
-  return sqrt(sum / (float)samples); // calculate RMS
+  float rms = sqrt(sum / (float)samples); // calculate RMS
+  Serial.println("RMS value computed.");
+  return rms;
 }
 
 float Audio::getNoiseLevel() { // calculates the noise level in decibels (dB)
+  Serial.println("Calculating noise level in dB...");
   float rms = computeRMS();
 
   float voltage = rms * (3.3 / 4095.0); // convert RMS to voltage (12-bit ADC, 3.3V ref)
   float dB = 20.0 * log10(voltage / 0.006); // convert voltage to dB (6mV noise floor)
 
-  if (dB < 0) dB = 0; // clamp dB value to avoid -inf for very low values
+  if (dB < 0) {
+    Serial.println("dB value clamped to 0 to avoid -inf.");
+    dB = 0; // clamp dB value to avoid -inf for very low values
+  }
 
+  dB = round(dB * 100.0) / 100.0; // round dB to 2 decimal places
+
+  Serial.println("Noise level in dB calculated.");
   return dB;
 }
 

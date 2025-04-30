@@ -7,27 +7,23 @@ Light::Light(uint8_t address, uint8_t sdaPin, uint8_t sclPin) {
 }
 
 void Light::begin() {
+  Serial.println("Light sensor initialization...");
   Wire.begin(m_sdaPin, m_sclPin); // init I2C with custom SDA and SCL pins
-  Wire.beginTransmission(m_address);
-  Wire.write(0x01); // set sensor to continuous measurement mode
-  Wire.endTransmission();
+  if (lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, m_address))
+    Serial.println("Light sensor initialized successfully.\n");
+  else
+    Serial.println("Failed to initialize light sensor!!!\n");
 }
 
-float Light::readLux() { // return light intensity in lux
-  uint8_t data[2];
-
-  Wire.beginTransmission(m_address);
-  Wire.requestFrom(m_address, (uint8_t)2);
-  if (Wire.available() == 2) {
-    data[0] = Wire.read();
-    data[1] = Wire.read();
+int Light::readLux() { // return light intensity in lux
+  Serial.println("Reading light intensity...");
+  float lux = lightMeter.readLightLevel();
+  if (lux < 0) {
+    Serial.println("Failed to read light intensity!!!\n");
+    return -1; // error reading light intensity
   }
-  Wire.endTransmission();
-
-  uint16_t rawData = (data[0] << 8) | data[1];
-  float lux = rawData / 1.2;
-
-  return lux;
+  Serial.println("Light intensity read.");
+  return (int)lux;
 }
 
 /*
