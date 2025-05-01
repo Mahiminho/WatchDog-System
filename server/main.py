@@ -78,7 +78,7 @@ logger = logging.getLogger(__name__)
 latest_data = {}
 
 # MQTT налаштування (це IP брокера, який ESP32 використовує)
-MQTT_BROKER = "192.168.31.69"
+MQTT_BROKER = "192.168.31.108"
 MQTT_PORT = 1883
 MQTT_TOPIC = "sensors/json"
 

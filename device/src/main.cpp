@@ -21,15 +21,15 @@
 // 2) Class for gas type (?) detection with sensor fusion alghorithms     PAUSED
 // 3) Class for people detection     PAUSED
 // 4) Class for damage detection     PAUSED
-// 5) Class for work with JSON: create JSON with sensors data + parse JSON with instructions from server
-// 6) Class for work with MQTT: send JSON to server + receive JSON from server
-// 7) Execution class (?): lock, alarm (speaker + LED)
+// 5) Class for work with JSON: parse JSON with instructions from server !!!
+// 6) Class for work with MQTT: receive JSON from server !!!
+// 7) Execution classes (?): lock (unlock auto if fire detected, lock/unlock by command), alarm (speaker + LED, auto if fire detected)
 // 8) Fill README files. Main file with instruction how to build, which sensors use, etc.
 // 9) Tests ???
 
-const char* ssid = "PIXEL_5G";
+const char* ssid = "PIXEL";
 const char* password = "20040517";
-const char* mqttServer = "192.168.31.69";
+const char* mqttServer = "192.168.31.108";
 const uint16_t mqttPort = 1883;
 const char* mqttClientId = "esp32-client";
 const char* mqttTopic = "sensors/json";
@@ -56,7 +56,7 @@ void setup() {
   sensors.initSensors();
   Serial.println("Sensors initialized.\n");
 
-  Serial.println("Connecting to WiFi...\n");
+  Serial.println("Connecting to WiFi...");
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED)
     delay(DELAY_MS);
