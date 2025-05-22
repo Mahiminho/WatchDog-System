@@ -3,6 +3,7 @@
 
 #include <WiFiClient.h>
 #include <PubSubClient.h>
+#include <WiFi.h>
 
 class MqttManager {
 public:
@@ -19,12 +20,12 @@ public:
 
 private:
   void connect();
-  const char* _mqttServer;
-  uint16_t _mqttPort;
-  const char* _mqttClientId;
-  const char* _mqttTopic;
-  WiFiClient& _wifiClient;
-  PubSubClient _mqttClient;
+  const char* m_mqttServer;
+  uint16_t m_mqttPort;
+  const char* m_mqttClientId;
+  const char* m_mqttTopic;
+  WiFiClient& m_wifiClient;
+  PubSubClient m_mqttClient;
 };
 
 #endif // MQTT_MANAGER_H

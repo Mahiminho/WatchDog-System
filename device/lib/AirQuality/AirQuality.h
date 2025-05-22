@@ -5,14 +5,17 @@
 
 class AirQuality {
 public:
-  AirQuality(uint8_t analogAQPin = 34); // default pin is 34
+  AirQuality(int analogAQPin = 34); // default pin for MQ-135
   void begin();
-  int readRaw();
   float readPPM();
+  int readRaw();
 
 private:
-  uint8_t m_analogAQPin;
-  float m_ppmFromRaw(int raw);
+  int m_analogAQPin;
+  float RZERO;
+  const float RLOAD = 10.0; // load resistance in kΩ
+  float getResistance(int rawADC);
+  void autoCalibrate();
 };
 
 #endif // AIRQUALITY_H

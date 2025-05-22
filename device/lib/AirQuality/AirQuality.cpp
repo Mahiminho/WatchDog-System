@@ -1,42 +1,65 @@
 #include "AirQuality.h"
 
-AirQuality::AirQuality(uint8_t analogAQPin) {
+AirQuality::AirQuality(int analogAQPin) {
   m_analogAQPin = analogAQPin;
 }
 
 void AirQuality::begin() {
-  Serial.println("Initializing air quality sensor...");
-  pinMode(m_analogAQPin, INPUT);
-  Serial.println("Air quality sensor initialized.\n");
+  Serial.println("Initializing Air Quality Sensor...");
+  analogReadResolution(12); // 12-bit ADC (0-4095)
+  Serial.println("Calibrating (~5 sec)...");
+  autoCalibrate();
+  Serial.println("Air Quality Sensor Initialized.\n");
 }
 
-int AirQuality::readRaw() { // return raw ADC value (0-4095)
-  Serial.println("Reading raw value from analog pin...");
-  int rawValue = analogRead(m_analogAQPin);
-  Serial.println("Successfully read raw value.");
-  return rawValue;
+int AirQuality::readRaw() {
+  return analogRead(m_analogAQPin);
 }
 
-float AirQuality::m_ppmFromRaw(int raw) { // convert raw ADC value to PPM (0-1000)
-  Serial.println("Converting raw value to PPM...");
-  float ppm = map(raw, 0, 4095, 0, 1000);
-  Serial.println("Successfully converted raw value to PPM.");
-  return ppm;
+float AirQuality::getResistance(int rawADC) {
+  if (rawADC == 0) return -1; // Avoid division by zero
+  return ((4095.0 / rawADC) - 1.0) * RLOAD;
 }
 
-float AirQuality::readPPM() { // return parts per million (parts of gas per million parts of air)
-  Serial.println("Getting PPM value...");
+void AirQuality::autoCalibrate() {
+  const int samples = 50;
+  long totalRaw = 0;
+
+  for (int i = 0; i < samples; i++) {
+    totalRaw += analogRead(m_analogAQPin);
+    delay(100); // delay between reads
+  }
+
+  int avgRaw = totalRaw / samples;
+  float resistance = getResistance(avgRaw);
+
+  float ppm = 400.0;
+  const float a = -0.42; // coefficients for CO2
+  const float b = 1.92;
+  float ratio = pow(10, (log10(ppm) - b) / a);
+
+  RZERO = resistance / ratio;
+}
+
+float AirQuality::readPPM() {
   int raw = readRaw();
-  float ppm = m_ppmFromRaw(raw);
-  Serial.println("Successfully got PPM value.");
+  float resistance = getResistance(raw);
+
+  const float a = -0.42;
+  const float b = 1.92;
+
+  float ratio = resistance / RZERO;
+  float ppm_log = a * log10(ratio) + b;
+  float ppm = pow(10, ppm_log);
+
   return ppm;
 }
 
 /*
-  0-100 PPM: Clean air, safe for humans (recommended as a normal level).
-  100-200 PPM: Moderate pollution level, may cause discomfort for sensitive individuals (e.g., those with allergies).
-  200-300 PPM: Harmful for sensitive groups, dangerous for individuals with asthma, heart conditions, or other vulnerabilities.
-  300-400 PPM: Harmful to the general population; prolonged exposure should be avoided.
-  400-500 PPM: Very harmful to all individuals; evacuation or significant ventilation is required.
-  >500 PPM: Hazardous level requiring immediate evacuation or ventilation to prevent severe health consequences.
+  < 400 PPM        : Unlikely in real environments – possible sensor drift or error
+  400–1,000 PPM    : Normal indoor air quality
+  1,000–2,000 PPM  : Drowsiness and reduced concentration may occur
+  2,000–5,000 PPM  : Headaches, sleepiness, and discomfort likely
+  5,000–10,000 PPM : Unsafe for prolonged exposure – risk of oxygen deprivation
+  > 10,000 PPM     : Dangerous – potential for unconsciousness or death
 */

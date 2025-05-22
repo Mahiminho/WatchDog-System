@@ -7,16 +7,15 @@ https://mosquitto.org/download/
 ```
 listener 1883
 allow_anonymous true
-log_type all
-# log_dest file C:\Program Files\mosquitto\mosquitto.log
 ```
 
 ## RUN MQTT FROM CMD FROM MOSQUITTO FOLDER
 mosquitto -v -c mosquitto.conf
 
-## RUN CMD AS ADMIN AND PASTE THIS COMMANDS
-1) netsh interface portproxy add v4tov4 listenaddress=192.168.31.108 listenport=1883 connectaddress=127.0.0.1 connectport=1883 **(but set ipv4 address or your PC in listenaddress)**
-2) netsh interface portproxy show all
+## RUN CMD AS ADMIN AND PASTE THIS COMMANDS (NECESSARY TO EXEC THEM EVERY SINGLE TIME BEFORE START)
+1) netsh interface portproxy delete v4tov4 listenaddress=192.168.31.108 listenport=1883 **to clear**
+2) netsh interface portproxy add v4tov4 listenaddress=192.168.31.108 listenport=1883 connectaddress=127.0.0.1 connectport=1883 **(but set ipv4 address or your PC in listenaddress)**
+3) netsh interface portproxy show all
 
 ## INSTALL MQTT EXPLORER
 https://mqtt-explorer.com/
@@ -35,8 +34,10 @@ https://mqtt-explorer.com/
 ## IF SOMETHING DOESN'T CLEAR
 https://youtu.be/5rHWeV0dwxo?si=WDT38q5fgN4hd2TB
 
-
-
-
-
-# SET NETWORK SETTINGS IN MAIN.CPP
+# SET NETWORK SETTINGS IN MAIN.CPP (NETWORK MUST BE ONLY 2.4 GHz NOT 5 GHz)
+const char* ssid = "NETWORK_NAME";
+const char* password = "PASSWORD";
+const char* mqttServer = "ipv4_of_your_machine_in_this_network";
+const uint16_t mqttPort = 1883; // NECESSARY THIS PORT FOR MQTT
+const char* mqttClientId = "esp32-client-01"; // nameof your device, whatever you want
+const char* mqttTopic = "device/sensors/data"; // topic name, also whatever you want

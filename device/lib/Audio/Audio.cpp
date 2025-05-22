@@ -42,7 +42,7 @@ float Audio::getNoiseLevel() { // calculates the noise level in decibels (dB)
   dB = round(dB * 100.0) / 100.0; // round dB to 2 decimal places
 
   Serial.println("Noise level in dB calculated.");
-  return dB;
+  return analogRead(m_analogAudioPin) * 40 / 2000; // подумай про 1000 чи 1500 замість 2000
 }
 
 /*

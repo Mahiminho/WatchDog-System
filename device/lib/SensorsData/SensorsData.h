@@ -15,6 +15,7 @@ typedef struct {
   int airQualityPPM;
   int lightIntensityLux;
   bool presenceDetected;
+  bool presenceDistance;
   bool motionDetected;
   float noiseLevelDB;
   bool vibrationDetected;
@@ -34,7 +35,8 @@ public:
               uint8_t light_address = 0x23,
               uint8_t light_sda_pin = 21,
               uint8_t light_scl_pin = 22,
-              uint8_t human_presence_pin = 27,
+              uint8_t human_presence_rx_pin = 16,
+              uint8_t human_presence_tx_pin = 17,
               uint8_t motion_detection_pin = 26,
               uint8_t audio_pin = 32,
               uint8_t vibration_detection_pin = 12); // default pins

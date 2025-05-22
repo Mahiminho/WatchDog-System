@@ -3,19 +3,26 @@
 
 #include <ArduinoJson.h>
 
-class JsonSerializer {
+class JsonHandler {
 public:
-  JsonSerializer();
+  JsonHandler();
   String toJson(
     float temperatureCelsius,
     float airQualityPPM,
     float lightIntensityLux,
     bool presenceDetected,
+    float presenceDistance,
     bool motionDetected,
     float noiseLevelDB,
     bool vibrationDetected,
     float fireDetectionScore,
-    bool fireDetected
+    bool fireDetected,
+    float gasDetectionScore,
+    bool gasDetected,
+    float humanDetectionScore,
+    bool humanDetected,
+    float damageDetectionScore,
+    bool damageDetected
   );
 };
 
