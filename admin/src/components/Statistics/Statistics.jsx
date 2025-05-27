@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import { useMemo } from "react";
 import styles from "./Statistics.module.css";
+import { LoadingDots } from "../Main/Main";
 import {
   LineChart,
   Line,
@@ -10,79 +11,70 @@ import {
   CartesianGrid,
 } from "recharts";
 
-const MAX_POINTS = 60;
+function getDomain(arr, key) {
+  if (!arr.length) return [0, 1];
+  const vals = arr.map((d) => d[key]);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const pad = (max - min) * 0.15 || 5; // 15% padding
+  return [Math.floor(min - pad), Math.ceil(max + pad)];
+}
 
-export default function Statistics() {
-  const [data, setData] = useState([]);
+function formatTime(date) {
+  const d = new Date(date);
+  return (
+    d.getHours().toString().padStart(2, "0") +
+    ":" +
+    d.getMinutes().toString().padStart(2, "0")
+  );
+}
 
-  useEffect(() => {
-    const fetchData = () => {
-      fetch("http://localhost:8000/data")
-        .then((response) => response.json())
-        .then((newData) => {
-          setData((prevData) => {
-            const updatedData = [
-              ...prevData,
-              {
-                time: new Date().toLocaleTimeString("en-GB", {
-                  minute: "2-digit",
-                  second: "2-digit",
-                }),
-                tempData: newData.tempData,
-                lightData: newData.lightData,
-                airData: newData.airData,
-                soundData: newData.soundData,
-              },
-            ];
-            return updatedData.slice(-MAX_POINTS);
-          });
-        })
-        .catch((error) => console.error("Connection error!", error));
-    };
-
-    fetchData();
-    const interval = setInterval(fetchData, 1000);
-    return () => clearInterval(interval);
-  }, []);
+export default function Statistics({ history, loading }) {
+  if (loading || !history || history.length === 0) {
+    return <LoadingDots />;
+  }
+  const chartData = useMemo(
+    () =>
+      history.map((d) => ({
+        ...d,
+        time: formatTime(d.time),
+      })),
+    [history]
+  );
 
   const chartColors = {
     temp: "#4d94ff",
     light: "#2962ff",
     air: "#7c4dff",
-    sound: "#6200ea"
+    sound: "#6200ea",
   };
 
   const renderChart = (title, dataKey, color, yDomain) => (
-    <div className={styles.chartBox}>
+    <div className={styles.chartBox} key={dataKey}>
       <h2 className={styles.title}>{title}</h2>
       <ResponsiveContainer width="100%" height="80%">
         <LineChart
-          data={data}
+          data={chartData}
           margin={{ top: 10, right: 30, left: -10, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
           <XAxis
             dataKey="time"
             stroke="rgba(255,255,255,0.5)"
-            tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }}
+            tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 12 }}
             height={30}
+            interval="preserveStartEnd"
+            minTickGap={30}
           />
           <YAxis
             domain={yDomain}
             stroke="rgba(255,255,255,0.5)"
-            tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }}
-            width={35}
+            tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 12 }}
+            width={50}
+            allowDecimals={false}
+            interval="preserveStartEnd"
           />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "rgba(14, 17, 23, 0.95)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              borderRadius: "4px",
-              padding: "8px",
-            }}
-            labelStyle={{ color: "rgba(255,255,255,0.8)" }}
-            itemStyle={{ color: "rgba(255,255,255,0.8)" }}
-          />
+          <Tooltip content={<CustomTooltip />} />
           <Line
             type="monotone"
             dataKey={dataKey}
@@ -98,10 +90,44 @@ export default function Statistics() {
 
   return (
     <div className={styles.grid}>
-      {renderChart("Temperature (°C)", "tempData", chartColors.temp, [-10, 55])}
-      {renderChart("Light (Lux)", "lightData", chartColors.light, [0, 150])}
-      {renderChart("Air Quality (PPM)", "airData", chartColors.air, [0, 150])}
-      {renderChart("Sound (dB)", "soundData", chartColors.sound, [0, 150])}
+      {renderChart(
+        "Temperature (°C)",
+        "tempData",
+        chartColors.temp,
+        getDomain(history, "tempData")
+      )}
+      {renderChart(
+        "Light (Lux)",
+        "lightData",
+        chartColors.light,
+        getDomain(history, "lightData")
+      )}
+      {renderChart(
+        "Air Quality (PPM)",
+        "airData",
+        chartColors.air,
+        getDomain(history, "airData")
+      )}
+      {renderChart(
+        "Sound (dB)",
+        "soundData",
+        chartColors.sound,
+        getDomain(history, "soundData")
+      )}
     </div>
   );
+}
+
+function CustomTooltip({ active, payload, label }) {
+  if (active && payload && payload.length) {
+    return (
+      <div className={styles.chartTooltip}>
+        <div style={{ color: "#fff", marginBottom: "0.3em" }}>{label}</div>
+        <div>
+          value: <b>{payload[0].value}</b>
+        </div>
+      </div>
+    );
+  }
+  return null;
 }

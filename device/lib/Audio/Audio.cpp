@@ -16,10 +16,10 @@ float Audio::computeRMS() { // сomputes the Root Mean Square (RMS) value of the
   unsigned long sum = 0;
 
   Serial.println("Starting RMS computation...");
-  for (int i = 0; i < samples; ++i) {
-    int16_t raw = analogRead(m_analogAudioPin) - 2048; // center the signal around 0 (assuming ~2.5V reference)
+  for (int i = 0; i < samples; ++i) { // take 1000 samples every 100 microseconds, it takes about 100ms to compute RMS
+    int16_t raw = analogRead(m_analogAudioPin) - 2048; // center the signal around 0
     sum += raw * raw; // accumulate the square of the signal
-    delayMicroseconds(50); // sampling frequency ~20kHz
+    delayMicroseconds(100); // sampling frequency ~20kHz
   }
 
   float rms = sqrt(sum / (float)samples); // calculate RMS
@@ -35,14 +35,14 @@ float Audio::getNoiseLevel() { // calculates the noise level in decibels (dB)
   float dB = 20.0 * log10(voltage / 0.006); // convert voltage to dB (6mV noise floor)
 
   if (dB < 0) {
-    Serial.println("dB value clamped to 0 to avoid -inf.");
+    Serial.println("dB value clamped to 0 to avoid -inf!");
     dB = 0; // clamp dB value to avoid -inf for very low values
   }
 
   dB = round(dB * 100.0) / 100.0; // round dB to 2 decimal places
 
   Serial.println("Noise level in dB calculated.");
-  return analogRead(m_analogAudioPin) * 40 / 2000; // подумай про 1000 чи 1500 замість 2000
+  return analogRead(m_analogAudioPin) * 40 / 1500;
 }
 
 /*

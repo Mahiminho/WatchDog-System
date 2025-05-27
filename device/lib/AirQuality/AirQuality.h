@@ -13,9 +13,9 @@ public:
 private:
   int m_analogAQPin;
   float RZERO;
-  const float RLOAD = 10.0; // load resistance in kΩ
+  const float RLOAD = 10.0; // load resistance in kOm
   float getResistance(int rawADC);
-  void autoCalibrate();
+  void autoCalibrate(int seconds = 30); // default calibration time
 };
 
 #endif // AIRQUALITY_H

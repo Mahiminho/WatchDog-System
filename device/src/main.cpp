@@ -19,11 +19,13 @@
 #define AUDIO_PIN 32
 #define VIBRATION_DETECTION_PIN 12
 
-#define DELAY_MS 500
+#define DELAY_MS 1000
 
 // TODO:
 // !) FIX THE AUDIO CLASS
-// 1) Add functional, for getting data on second UART for grtting about camera URL and send it like first message on server on setup
+// !!) Google how potentiometers works on MQ-135 and SW-420 to set the best sensitivity. Probably set better sensitivity for SR501
+// 0) Reconfig LD2420 to more channels for bigger diapason of detection
+// 1) Add functional, for getting data on second UART: just get URL and HTTP request to UI
 // 2) Little refactoring of sensor classes (comments at least and structure)
 // 3) MAKE MORE REAL CLASSES (FireDetection, GasDetection, HumanDetection, DamageDetection) (or the value is real?)
 // 4) Class for work with JSON: parse JSON with instructions from server !!!
@@ -62,7 +64,7 @@ MqttManager mqtt(mqttServer, mqttPort, mqttClientId, mqttTopic, wifiClient);
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Initializing sensors...");
+  Serial.println("Initializing sensors...\n");
   sensors.initSensors();
   Serial.println("Sensors initialized.\n");
 
@@ -79,7 +81,7 @@ void setup() {
     ESP.restart();
   }
   Serial.println("WiFi connected!\n");
-  Serial.printf("IP address: %s\n\n\n", WiFi.localIP().toString().c_str());
+  Serial.printf("IP address: %s\n\n", WiFi.localIP().toString().c_str());
   delay(DELAY_MS);
 
   mqtt.begin();

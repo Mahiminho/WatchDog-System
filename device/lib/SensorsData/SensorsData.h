@@ -15,7 +15,7 @@ typedef struct {
   int airQualityPPM;
   int lightIntensityLux;
   bool presenceDetected;
-  bool presenceDistance;
+  float presenceDistance;
   bool motionDetected;
   float noiseLevelDB;
   bool vibrationDetected;
@@ -31,15 +31,15 @@ class SensorsData :
   public VibrationDetection {
 public:
   SensorsData(uint8_t thermometer_pin = 4,
-              uint8_t air_quality_pin = 34,
-              uint8_t light_address = 0x23,
-              uint8_t light_sda_pin = 21,
-              uint8_t light_scl_pin = 22,
-              uint8_t human_presence_rx_pin = 16,
-              uint8_t human_presence_tx_pin = 17,
-              uint8_t motion_detection_pin = 26,
-              uint8_t audio_pin = 32,
-              uint8_t vibration_detection_pin = 12); // default pins
+    uint8_t air_quality_pin = 34,
+    uint8_t light_address = 0x23,
+    uint8_t light_sda_pin = 21,
+    uint8_t light_scl_pin = 22,
+    uint8_t human_presence_rx_pin = 16,
+    uint8_t human_presence_tx_pin = 17,
+    uint8_t motion_detection_pin = 26,
+    uint8_t audio_pin = 32,
+    uint8_t vibration_detection_pin = 12); // default pins
   void initSensors();
   void collectData();
   SensorReadings getData() const;

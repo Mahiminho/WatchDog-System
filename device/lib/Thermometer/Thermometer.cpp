@@ -10,11 +10,11 @@ void Thermometer::begin() {
   Serial.println("Thermometer initialized.\n");
 }
 
-float Thermometer::getTemperature() { // return temperature in Celsius
+float Thermometer::getTemperature() {
   Serial.println("Requesting temperature...");
   sensors.requestTemperatures();
   float temperature = sensors.getTempCByIndex(0);
-  temperature = round(temperature * 100.0) / 100.0; // Limit to 2 decimal places
+  temperature = round(temperature * 100.0) / 100.0;
   Serial.println("Temperature received.");
   return temperature;
 }

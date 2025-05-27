@@ -1,15 +1,15 @@
 #include "SensorsData.h"
 
 SensorsData::SensorsData(uint8_t thermometer_pin,
-                         uint8_t air_quality_pin,
-                         uint8_t light_address,
-                         uint8_t light_sda_pin,
-                         uint8_t light_scl_pin,
-                         uint8_t human_presence_rx_pin,
-                          uint8_t human_presence_tx_pin,
-                         uint8_t motion_detection_pin,
-                         uint8_t audio_pin,
-                         uint8_t vibration_detection_pin)
+  uint8_t air_quality_pin,
+  uint8_t light_address,
+  uint8_t light_sda_pin,
+  uint8_t light_scl_pin,
+  uint8_t human_presence_rx_pin,
+  uint8_t human_presence_tx_pin,
+  uint8_t motion_detection_pin,
+  uint8_t audio_pin,
+  uint8_t vibration_detection_pin)
 
   : Thermometer(thermometer_pin),
   AirQuality(air_quality_pin),

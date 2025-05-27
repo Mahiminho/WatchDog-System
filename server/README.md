@@ -6,10 +6,12 @@ Install Python
 Install Ollama
 ...
 
-Download and Run DeepSeek-R1 (in cmd)
-ollama pull deepseek-r1:8b
+Download and Run phi3:latest (in cmd)
+ollama pull phi3:latest
 ollama list
-ollama pull deepseek-r1:8b (to test, model works or not)
+ollama run phi3:latest (to test, model works or not)
+
+Dont close Ollama while server works
 
 From
 PS C:\Users\Sager\Desktop\WDS>

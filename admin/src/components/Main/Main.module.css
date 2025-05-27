@@ -2,23 +2,20 @@
   display: flex;
   flex-wrap: wrap;
   width: 100vw;
-  height: 100vh;
-}
-
-.row {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
+  height: calc(100vh - 3em);
+  box-sizing: border-box;
 }
 
 .card {
-  width: 50vw;
-  height: 50vh;
+  width: 50%;
+  height: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   transition: background-color 0.3s ease-in-out;
+  gap: 1.5em;
+  box-sizing: border-box;
 }
 
 .card:hover {
@@ -28,10 +25,50 @@
 .image {
   width: 50%;
   height: 50%;
-  margin-bottom: 5%;
+  margin-bottom: 0;
 }
 
 .text {
   font-size: 30px;
   font-weight: bold;
+  color: #fff;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100vw;
+  color: #fff;
+  letter-spacing: 2px;
+  text-align: center;
+  gap: 0;
+}
+
+.loadingLogo {
+  width: 30em;
+  max-height: 30vh;
+  height: auto;
+  margin-bottom: 0;
+}
+
+.loadingText {
+  font-size: 2em;
+  font-weight: bold;
+  color: #fff;
+  margin-top: 0;
+}
+
+.tooltip {
+  background: #111;
+  color: #fff;
+  padding: 0.7em 1.2em;
+  border-radius: 0.5em;
+  font-size: 1em;
+  white-space: pre-line;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }

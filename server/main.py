@@ -1,12 +1,33 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import paho.mqtt.client as mqtt
 import threading
 import json
 import asyncio
 import ollama
+import datetime
+from sqlmodel import SQLModel, Field, create_engine, Session, select
+from typing import List, Optional
+from fastapi.middleware.cors import CORSMiddleware
+import os
+import asyncio
+import time
+
+main_asyncio_loop = None
+last_ai_report_time = 0
+AI_REPORT_INTERVAL = 60
+ai_report_generating = False
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # MQTT settings
 MQTT_BROKER = "192.168.31.108"
@@ -17,6 +38,32 @@ MQTT_CLIENT_ID = "fastapi-mqtt-server"
 # Ollama model name
 OLLAMA_MODEL = "phi3:latest"
 
+# SQLite via SQLModel
+DATABASE_URL = "sqlite:///./sensor_data.db"
+engine = create_engine(DATABASE_URL, echo=False)
+DB_PATH = "./sensor_data.db"
+MAX_DB_SIZE = 1024 * 1024 * 1024  # 1 GB
+
+class SensorReading(SQLModel, table=True):
+    timestamp: str = Field(primary_key=True, max_length=26)  # "YYYY/MM/DD HH:MM:SS.MS"
+    temperature: float
+    airPPM: int
+    lightLux: int
+    presence: bool
+    presenceDistance: float
+    motion: bool
+    noiseDB: int
+    vibration: bool
+    fireScore: float
+    fireDetected: bool
+    gasScore: float
+    gasDetected: bool
+    humanScore: float
+    humanDetected: bool
+    damageScore: float
+    damageDetected: bool
+
+# Pydantic model for incoming payload
 class SensorData(BaseModel):
     temperature: float
     airPPM: int
@@ -38,179 +85,194 @@ class SensorData(BaseModel):
 class SensorAnalysisResult:
     def __init__(self, data: SensorData):
         self.data = data
-        self.single_sensor_insights: list[str] = []
-        self.combined_sensor_insights: list[str] = []
+        self.single_sensor_insights: list[dict] = []
+        self.combined_sensor_insights: list[dict] = []
         self.ai_report: str | None = None
+        self.ai_report_time: str | None = None
 
-    def add_single(self, insight: str):
-        self.single_sensor_insights.append(insight)
+    def add_single(self, insight: str, timestamp: str):
+        self.single_sensor_insights.append({"text": insight, "timestamp": timestamp})
 
-    def add_combined(self, insight: str):
-        self.combined_sensor_insights.append(insight)
+    def add_combined(self, insight: str, timestamp: str):
+        self.combined_sensor_insights.append({"text": insight, "timestamp": timestamp})
 
-# Store latest result globally for scheduled reporting
 latest_result: SensorAnalysisResult | None = None
 
-async def generate_environment_report(readings: dict, previous: str | None) -> str:
+@app.on_event("startup")
+def on_startup():
+    global main_asyncio_loop
+    SQLModel.metadata.create_all(engine)
+    threading.Thread(target=start_mqtt, daemon=True).start()
+    main_asyncio_loop = asyncio.get_event_loop()
+    
+
+def on_connect(client, userdata, flags, rc):
+    print("Connected to MQTT broker with result code", rc)
+    client.subscribe(MQTT_TOPIC)
+
+def on_message(client, userdata, msg):
+    global latest_result, main_asyncio_loop, last_ai_report_time, ai_report_generating
+    try:
+        data_dict = json.loads(msg.payload.decode())
+        sensor = SensorData(**data_dict)
+
+        if latest_result is None:
+            latest_result = SensorAnalysisResult(sensor)
+        else:
+            latest_result.data = sensor
+            latest_result.single_sensor_insights = []
+            latest_result.combined_sensor_insights = []
+
+        analyze_single_sensors(sensor, latest_result)
+        analyze_combined_sensors(sensor, latest_result)
+
+        # save to SQLite
+        ts = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")
+        rec = SensorReading(timestamp=ts, **data_dict)
+        with Session(engine) as sess:
+            sess.add(rec)
+            sess.commit()
+        cleanup_database_if_needed()
+
+        print_sensor_data(sensor, latest_result)
+
+        now = time.time()
+        if (
+            main_asyncio_loop
+            and main_asyncio_loop.is_running()
+            and now - last_ai_report_time > AI_REPORT_INTERVAL
+            and not ai_report_generating
+        ):
+            ai_report_generating = True
+            last_ai_report_time = now
+            asyncio.run_coroutine_threadsafe(update_ai_report(sensor), main_asyncio_loop)
+
+    except Exception as e:
+        print("Error processing message:", e)
+
+async def update_ai_report(sensor):
+    global latest_result, ai_report_generating
+    rpt = await generate_environment_report(sensor.dict())
+    latest_result.ai_report = rpt
+    latest_result.ai_report_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"\n{datetime.datetime.now().time()} AI Report: {rpt}\n")
+    ai_report_generating = False
+ 
+def start_mqtt():
+    client = mqtt.Client(client_id=MQTT_CLIENT_ID)
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_forever()
+
+async def generate_environment_report(readings: dict) -> str:
+    readings_str = ", ".join(f"{k}: {v}" for k, v in readings.items())
     prompt = (
-        (f"Previous: {previous}\n" if previous else "") +
-        f"Current readings: {readings}\n" +
-        "You are an environmental monitoring specialist. Write a single concise (2–3 sentences), professional paragraph in plain English describing the current environment. Refer to values only in digits, skip sensor explanations, and mention only meaningful changes compared to the previous snapshot. Focus on comfort, air quality, light, presence/motion, vibration, or human detection."
+        "You are an environmental monitoring specialist. "
+        "Based only on these sensor readings: "
+        f"{readings_str}. "
+        "Write a concise, professional summary (max 3 sentences) in plain English describing the current environment for a human. "
+        "Do NOT use lists, markdown, or formatting. "
+        "Mention only meaningful changes and useful information. "
+        "Refer to values only in digits. "
+        "Skip sensor explanations and technical details. "
+        "Focus on comfort, air quality, light, presence/motion, vibration, and human detection. "
+        "Do not repeat instructions or add extra requirements. "
+        "Finish your summary with the sentence: End of report."
     )
     loop = asyncio.get_running_loop()
-    # Use ollama.generate directly
     response = await loop.run_in_executor(
         None,
         lambda: ollama.generate(model=OLLAMA_MODEL, prompt=prompt)
     )
-    return response['response'].strip()
-
-async def periodic_report_task():
-    global latest_result
-    previous_report = None
-    while True:
-        await asyncio.sleep(60)  # wait 1 minute
-        if latest_result is None:
-            continue
-        report = await generate_environment_report(latest_result.data.dict(), previous_report)
-        latest_result.ai_report = report
-        previous_report = report
-        print(f"\nAI Report (scheduled): {report}\n")
-
-# Detailed sensor analysis functions
-def analyze_single_sensors(data: SensorData, result: SensorAnalysisResult):
-    if data.temperature < 14:
-      result.add_single("Temperature is cold and uncomfortable.")
-    elif data.temperature < 18:
-      result.add_single("Temperature is cool, slightly below comfort zone.")
-    elif data.temperature < 22:
-      result.add_single("Temperature is comfortable and ideal.")
-    elif data.temperature < 25:
-      result.add_single("Temperature is comfortably warm.")
-    elif data.temperature < 28:
-      result.add_single("Temperature is warm, approaching discomfort.")
-    elif data.temperature < 32:
-      result.add_single("Temperature is hot and uncomfortable.")
+    raw = response["response"].strip()
+    end_marker = "End of report."
+    idx = raw.find(end_marker)
+    if idx != -1:
+        clean = raw[:idx].strip() 
     else:
-      result.add_single("Temperature is extremely hot, ventilation needed.")
+        clean = raw
+
+    if clean and clean[-1] not in ".!?":
+        clean = clean[:-1] + "."
+    elif clean and clean[-1] != ".":
+        clean = clean[:-1] + "."
+
+    return clean
+
+def analyze_single_sensors(data: SensorData, result: SensorAnalysisResult):
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if data.temperature < 14:
+        result.add_single("Temperature is cold and uncomfortable.", timestamp)
+    elif data.temperature < 18:
+        result.add_single("Temperature is cool, slightly below comfort zone.", timestamp)
+    elif data.temperature < 22:
+        result.add_single("Temperature is comfortable and ideal.", timestamp)
+    elif data.temperature < 25:
+        result.add_single("Temperature is comfortably warm.", timestamp)
+    elif data.temperature < 28:
+        result.add_single("Temperature is warm, approaching discomfort.", timestamp)
+    elif data.temperature < 32:
+        result.add_single("Temperature is hot and uncomfortable.", timestamp)
+    else:
+        result.add_single("Temperature is extremely hot, ventilation needed.", timestamp)
 
     if data.airPPM < 700:
-      result.add_single("Air quality is excellent.")
+        result.add_single("Air quality is excellent.", timestamp)
     elif data.airPPM < 1000:
-      result.add_single("Air quality is good.")
+        result.add_single("Air quality is good.", timestamp)
     elif data.airPPM < 1500:
-      result.add_single("Air quality is moderate.")
+        result.add_single("Air quality is moderate.", timestamp)
     elif data.airPPM < 2500:
-      result.add_single("Air quality is unhealthy for sensitive groups.")
+        result.add_single("Air quality is unhealthy for sensitive groups.", timestamp)
     else:
-      result.add_single("Air quality is poor, consider ventilation.")
+        result.add_single("Air quality is poor, consider ventilation.", timestamp)
 
     if data.lightLux < 10:
-      result.add_single("Lighting is very low, environment is dark.")
+        result.add_single("Lighting is very low, environment is dark.", timestamp)
     elif data.lightLux < 100:
-      result.add_single("Lighting is dim; low visibility.")
+        result.add_single("Lighting is dim; low visibility.", timestamp)
     elif data.lightLux < 500:
-      result.add_single("Lighting is moderate, comfortable for tasks.")
+        result.add_single("Lighting is moderate, comfortable for tasks.", timestamp)
     elif data.lightLux < 2000:
-      result.add_single("Lighting is bright, suitable for most activities.")
+        result.add_single("Lighting is bright, suitable for most activities.", timestamp)
     else:
-      result.add_single("Lighting is very bright, comparable to daylight.")
+        result.add_single("Lighting is very bright, comparable to daylight.", timestamp)
 
     if data.noiseDB < 20:
-      result.add_single("Noise level is extremely low, unusually quiet environment.")
+        result.add_single("Noise level is extremely low, unusually quiet environment.", timestamp)
     elif data.noiseDB < 30:
-      result.add_single("Noise level is very low, typical of a quiet room.")
+        result.add_single("Noise level is very low, typical of a quiet room.", timestamp)
     elif data.noiseDB < 45:
-      result.add_single("Noise level is low, similar to a residential area at night.")
+        result.add_single("Noise level is low, similar to a residential area at night.", timestamp)
     elif data.noiseDB < 60:
-      result.add_single("Noise level is moderate, comparable to normal conversation.")
+        result.add_single("Noise level is moderate, comparable to normal conversation.", timestamp)
     elif data.noiseDB < 70:
-      result.add_single("Noise level is elevated.")
+        result.add_single("Noise level is elevated.", timestamp)
     elif data.noiseDB < 85:
-      result.add_single("Noise level is high, may cause discomfort over time.")
+        result.add_single("Noise level is high, may cause discomfort over time.", timestamp)
     elif data.noiseDB < 95:
-      result.add_single("Noise level is very high, potentially harmful for prolonged exposure.")
+        result.add_single("Noise level is very high, potentially harmful for prolonged exposure.", timestamp)
     else:
-      result.add_single("Noise level is dangerously high, hearing protection recommended.")
+        result.add_single("Noise level is dangerously high, hearing protection recommended.", timestamp)
 
     if data.presence:
         if data.presenceDistance < 1.0:
-            result.add_single("Presence detected very close (<1m).")
+            result.add_single("Presence detected very close (<1m).", timestamp)
         elif data.presenceDistance < 3.0:
-            result.add_single("Presence detected at moderate distance.")
+            result.add_single("Presence detected at moderate distance.", timestamp)
         else:
-            result.add_single("Presence detected but far away.")
+            result.add_single("Presence detected but far away.", timestamp)
     else:
-        result.add_single("No presence detected.")
+        result.add_single("No presence detected.", timestamp)
 
-    result.add_single("Motion detected." if data.motion else "No motion detected.")
-    result.add_single("Vibration detected." if data.vibration else "No vibration detected.")
-
-
-def analyze_combined_sensors(data: SensorData, result: SensorAnalysisResult):
-    fire_factor = 0
-    if data.temperature > 40:
-        fire_factor += 1
-    if data.gasScore > 0.5:
-        fire_factor += 1
-    if data.lightLux > 500:
-        fire_factor += 1
-    if data.fireDetected:
-        fire_factor += 2
-    if fire_factor >= 4:
-        result.add_combined("Possible fire outbreak; immediate action required.")
-    elif fire_factor >= 2:
-        result.add_combined("Conditions indicate potential fire risk.")
-    else:
-        result.add_combined("No significant fire indicators.")
-
-    if data.gasDetected:
-        result.add_combined("High probability of hazardous gas presence.")
-    elif data.airPPM > 1500:
-        result.add_combined("Elevated particulate levels, air pollution risk.")
-    else:
-        result.add_combined("Air pollution levels are within acceptable range.")
-
-    human_factor = 0
-    if data.humanDetected:
-        human_factor += 2
-    if data.presence:
-        human_factor += 1
-    if data.motion:
-        human_factor += 1
-    if data.humanScore > 50:
-        human_factor += 1
-    if data.noiseDB > 50:
-        human_factor += 1
-    if data.presenceDistance < 2:
-        human_factor += 1
-    if human_factor >= 5:
-        result.add_combined("Strong evidence of human presence detected.")
-    elif human_factor >= 3:
-        result.add_combined("Possible human presence in the area.")
-    else:
-        result.add_combined("No clear human presence detected.")
-
-    damage_factor = 0
-    if data.damageDetected:
-        damage_factor += 2
-    if data.vibration:
-        damage_factor += 1
-    if data.damageScore > 0.5:
-        damage_factor += 1
-    if data.presence and data.presenceDistance < 1.5:
-        damage_factor += 1
-    if damage_factor >= 4:
-        result.add_combined("Potential structural damage detected; inspect immediately.")
-    elif damage_factor >= 2:
-        result.add_combined("Signs of possible damage; monitor closely.")
-    else:
-        result.add_combined("No structural damage suspected.")
+    result.add_single("Motion detected." if data.motion else "No motion detected.", timestamp)
+    result.add_single("Vibration detected." if data.vibration else "No vibration detected.", timestamp)
 
 def print_sensor_data(data: SensorData, result: SensorAnalysisResult):
     print("\nIncoming Sensor Data:")
-    for field, value in data.dict().items():
-        print(f"{field}: {value}")
+    for k, v in data.dict().items():
+        print(f"{k}: {v}")
     print("\nSensor-based Insights:")
     for insight in result.single_sensor_insights:
         print(f"- {insight}")
@@ -219,40 +281,131 @@ def print_sensor_data(data: SensorData, result: SensorAnalysisResult):
         print(f"* {insight}")
     if result.ai_report:
         print(f"\nAI Report: {result.ai_report}")
-    print("\n" + "-" * 50 + "\n")
+    print("\n" + "-"*50 + "\n")
 
-def on_connect(client, userdata, flags, rc):
-    print("Connected to MQTT broker with result code", rc)
-    client.subscribe(MQTT_TOPIC)
+def analyze_combined_sensors(data: SensorData, result: SensorAnalysisResult):
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    fire_factor = 0
+    if data.temperature > 40: fire_factor += 1
+    if data.gasScore > 0.5:     fire_factor += 1
+    if data.lightLux > 500:     fire_factor += 1
+    if data.fireDetected:       fire_factor += 2
+    if fire_factor >= 4:
+        result.add_combined("Possible fire outbreak; immediate action required.", timestamp)
+    elif fire_factor >= 2:
+        result.add_combined("Conditions indicate potential fire risk.", timestamp)
+    else:
+        result.add_combined("No significant fire indicators.", timestamp)
 
-def on_message(client, userdata, msg):
-    global latest_result
+    if data.gasDetected or data.gasScore > 0.7:
+        result.add_combined("High probability of hazardous gas presence.", timestamp)
+    elif data.airPPM > 1500:
+        result.add_combined("Elevated particulate levels; air pollution risk.", timestamp)
+    else:
+        result.add_combined("Air pollution levels are within acceptable range.", timestamp)
+
+    human_factor = sum([
+        2 if data.humanDetected else 0,
+        1 if data.presence else 0,
+        1 if data.motion else 0,
+        1 if data.humanScore > 50 else 0,
+        1 if data.noiseDB > 50 else 0,
+        1 if data.presenceDistance < 2 else 0,
+    ])
+    if human_factor >= 5:
+        result.add_combined("Strong evidence of human presence detected.", timestamp)
+    elif human_factor >= 3:
+        result.add_combined("Possible human presence in the area.", timestamp)
+    else:
+        result.add_combined("No clear human presence detected.", timestamp)
+
+    damage_factor = sum([
+        2 if data.damageDetected else 0,
+        1 if data.vibration else 0,
+        1 if data.damageScore > 0.5 else 0,
+        1 if data.presence and data.presenceDistance < 1.5 else 0,
+    ])
+    if damage_factor >= 4:
+        result.add_combined("Potential structural damage detected; inspect immediately.", timestamp)
+    elif damage_factor >= 2:
+        result.add_combined("Signs of possible damage; monitor closely.", timestamp)
+    else:
+        result.add_combined("No structural damage suspected.", timestamp)
+
+def get_sensor_data_by_time(
+    time1: str, 
+    time2: Optional[str] = None
+) -> List[SensorReading] | SensorReading | None: # time format: "YYYY/MM/DD HH:MM:SS"
+    with Session(engine) as session:
+        if time2 is None:
+            stmt = (
+                select(SensorReading)
+                .order_by(SQLModel.func.abs(SQLModel.func.strftime('%s', SensorReading.timestamp) - SQLModel.func.strftime('%s', time1)))
+                .limit(1)
+            )
+            result = session.exec(stmt).first()
+            return result
+        else:
+            stmt = (
+                select(SensorReading)
+                .where(SensorReading.timestamp >= time1)
+                .where(SensorReading.timestamp <= time2)
+                .order_by(SensorReading.timestamp)
+            )
+            results = session.exec(stmt).all()
+            return results
+
+def cleanup_database_if_needed():
     try:
-        payload_str = msg.payload.decode()
-        data = json.loads(payload_str)
-        sensor_data = SensorData(**data)
-        result = SensorAnalysisResult(sensor_data)
-        analyze_single_sensors(sensor_data, result)
-        analyze_combined_sensors(sensor_data, result)
-        latest_result = result
-        print_sensor_data(sensor_data, result)
-    except json.JSONDecodeError as e:
-        print("JSON decode error:", e)
+        size = os.path.getsize(DB_PATH)
+        if size < MAX_DB_SIZE:
+            return
+        with Session(engine) as session:
+            total = session.exec(select(SQLModel.func.count()).select_from(SensorReading)).one()
+            if total < 2:
+                return
+            to_delete = total // 2
+            old_records = session.exec(
+                select(SensorReading.timestamp).order_by(SensorReading.timestamp).limit(to_delete)
+            ).all()
+            if old_records:
+                session.exec(
+                    SensorReading.__table__.delete().where(SensorReading.timestamp.in_(old_records))
+                )
+                session.commit()
+                print(f"Database cleanup: deleted {to_delete} oldest records.")
     except Exception as e:
-        print("Parsing error:", e)
+        print("Database cleanup error:", e)
+        
+@app.get("/sensors-data")
+def get_latest_sensor_data():
+    global latest_result
+    if latest_result:
+        return latest_result.data.dict()
+    return JSONResponse(status_code=404, content={"error": "No data"})
 
-def start_mqtt():
-    client = mqtt.Client(client_id=MQTT_CLIENT_ID)
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    client.loop_forever()
+@app.get("/single-sensors-results")
+def get_single_sensors_results():
+    global latest_result
+    if latest_result:
+        return {"single_sensor_insights": latest_result.single_sensor_insights}
+    return JSONResponse(status_code=404, content={"error": "No data"})
 
-@app.on_event("startup")
-def startup_event():
-    mqtt_thread = threading.Thread(target=start_mqtt)
-    mqtt_thread.daemon = True
-    mqtt_thread.start()
-    asyncio.create_task(periodic_report_task())
+@app.get("/combined-sensors-results")
+def get_combined_sensors_results():
+    global latest_result
+    if latest_result:
+        return {"combined_sensor_insights": latest_result.combined_sensor_insights}
+    return JSONResponse(status_code=404, content={"error": "No data"})
+
+@app.get("/enviroment-report")
+def get_enviroment_report():
+    global latest_result
+    if latest_result and latest_result.ai_report:
+        return {
+            "ai_report": latest_result.ai_report,
+            "timestamp": latest_result.ai_report_time
+        }
+    return JSONResponse(status_code=404, content={"error": "No report"})
 
 # uvicorn main:app --host 0.0.0.0 --port 8000

@@ -1,29 +1,36 @@
 .grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   width: 100vw;
-  height: 100vh;
+  height: calc(100vh - 3em);
   margin: 0;
-  padding: 0;
-  gap: 1px;
-  background-color: rgba(255, 255, 255, 0.1);
+  padding: 1.5em 1em 2em 1em;
 }
 
 .chartBox {
-  width: 100%;
-  height: 100%;
-  padding: 1rem;
+  width: 50%;
+  height: 50%;
+  padding: 0 0.5em;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .title {
-  color: #ffffff;
+  color: #fff;
   text-align: center;
-  margin: 0;
-  padding: 0 0 0.75rem 0;
+  margin: 0 0 0.75em 0;
   font-size: 1.7rem;
   font-weight: 600;
   opacity: 0.95;
+}
+
+.chartTooltip {
+  color: #fff;
+  padding: 0.7em 1.2em;
+  border-radius: 0.5em;
+  font-size: 1em;
+  white-space: pre-line;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: none;
 }
