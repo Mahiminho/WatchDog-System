@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <Camera.h>
 #include <SensorsData.h>
 #include <FireDetection.h>
 #include <GasDetection.h>
@@ -7,6 +8,9 @@
 #include <DamageDetection.h>
 #include <JsonHandler.h>
 #include <MqttManager.h>
+
+#define CAMERA_RX_PIN 25
+#define CAMERA_TX_PIN 13
 
 #define THERMOMETER_PIN 4
 #define AIR_QUALITY_PIN 34
@@ -23,7 +27,8 @@
 
 // TODO:
 // !) FIX THE AUDIO CLASS
-// !!) Google how potentiometers works on MQ-135 and SW-420 to set the best sensitivity. Probably set better sensitivity for SR501
+// !!) ADD MY FREE ROUTER SETTINGS
+// !!!) Google how potentiometers works on MQ-135 and SW-420 to set the best sensitivity. Probably set better sensitivity for SR501
 // 0) Reconfig LD2420 to more channels for bigger diapason of detection
 // 1) Add functional, for getting data on second UART: just get URL and HTTP request to UI
 // 2) Little refactoring of sensor classes (comments at least and structure)
@@ -32,7 +37,6 @@
 // 5) Class for work with MQTT: receive JSON from server !!!
 // 6) Execution classes: lock (unlock auto if fire detected, lock if damage, lock/unlock by command), alarm (speaker + LED, auto if fire detected or damage)
 // 7) Fill README files. Main file with instruction how to build, which sensors use, etc.
-// 8) Tests ???
 
 // MQTT broker settings
 const char* ssid = "PIXEL";
@@ -40,7 +44,8 @@ const char* password = "20040517";
 const char* mqttServer = "192.168.31.108";
 const uint16_t mqttPort = 1883;
 const char* mqttClientId = "esp32-client-01";
-const char* mqttTopic = "device/sensors/data";
+const char* mqttTopicSensors = "device/sensors/data";
+const char* mqttTopicCamera = "device/camera/url";
 
 SensorsData sensors(
   THERMOMETER_PIN,
@@ -54,19 +59,46 @@ SensorsData sensors(
   AUDIO_PIN,
   VIBRATION_DETECTION_PIN
 );
+Camera camera(CAMERA_RX_PIN, CAMERA_TX_PIN);
 FireDetection fireDetection(DELAY_MS);
 GasDetection gasDetection(DELAY_MS);
 HumanDetection humanDetection(DELAY_MS);
 DamageDetection damageDetection(DELAY_MS);
 JsonHandler jsonHandler;
 WiFiClient wifiClient;
-MqttManager mqtt(mqttServer, mqttPort, mqttClientId, mqttTopic, wifiClient);
+MqttManager mqttManager(mqttServer, mqttPort, mqttClientId, mqttTopicSensors, wifiClient);
+
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Initializing sensors...\n");
   sensors.initSensors();
   Serial.println("Sensors initialized.\n");
+
+  Serial.println("Initializing camera...\n");
+  // camera.begin();
+  // String url = "";
+  // while (url.length() == 0) {
+  //   url = camera.sendNetworkDataAndGetUrl(ssid, password);
+  //   if (url.length() == 0) {
+  //     Serial.println("No URL from camera, retrying...");
+  //     delay(1000);
+  //   }
+  // }
+  // Serial.print("Camera URL: ");
+  // Serial.println(url);
+  camera.begin();
+  camera.sendNetworkData(ssid, password);
+  String url = "";
+  while (url.length() == 0) {
+    url = camera.receiveUrl(5000);
+    if (url.length() == 0) {
+      Serial.println("No URL from camera, retrying...");
+      camera.sendNetworkData(ssid, password);
+      // delay(1000);
+    }
+  }
+  Serial.println("Camera initialized.\n");
 
   Serial.println("Connecting to WiFi...");
   WiFi.mode(WIFI_STA);
@@ -84,7 +116,16 @@ void setup() {
   Serial.printf("IP address: %s\n\n", WiFi.localIP().toString().c_str());
   delay(DELAY_MS);
 
-  mqtt.begin();
+  mqttManager.begin();
+
+  if (url.length() > 0) {
+    bool cameraUrlSent = mqttManager.sendRaw(url, mqttTopicCamera);
+    Serial.print("Camera URL sent to MQTT: ");
+    Serial.println(cameraUrlSent ? "Success" : "Failed");
+  }
+
+  Serial.println("System setup completed.\n");
+  Serial.println();
 }
 
 void loop() {
@@ -139,7 +180,7 @@ void loop() {
   );
 
   // send JSON to MQTT broker
-  bool mqttSendingStatus = mqtt.sendJson(jsonOutput);
+  bool mqttSendingStatus = mqttManager.sendJson(jsonOutput);
 
   Serial.println("Sensor readings:");
   Serial.println("Temp: " + String(readings.temperatureCelsius) + " °C");

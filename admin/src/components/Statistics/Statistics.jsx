@@ -43,10 +43,10 @@ export default function Statistics({ history, loading }) {
   );
 
   const chartColors = {
-    temp: "#4d94ff",
-    light: "#2962ff",
-    air: "#7c4dff",
-    sound: "#6200ea",
+    temp: "#1e90ff",
+    light: "#7c3aed",
+    air: "#a78bfa",
+    sound: "#2563eb",
   };
 
   const renderChart = (title, dataKey, color, yDomain) => (

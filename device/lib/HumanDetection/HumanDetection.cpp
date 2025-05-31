@@ -28,7 +28,7 @@ void HumanDetection::update(bool motion, bool presence, float distanceM, float n
 }
 
 bool HumanDetection::isHumanDetected() const {
-  return presenceProb >= 50.0f;
+  return presenceProb >= 70.0f;
 }
 
 float HumanDetection::getPresenceProbability() const {

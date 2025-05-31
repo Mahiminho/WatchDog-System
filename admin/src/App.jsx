@@ -4,6 +4,7 @@ import Header from "./components/Header/Header";
 import Main from "./components/Main/Main";
 import Statistics from "./components/Statistics/Statistics";
 import Logs from "./components/Logs/Logs";
+import Stream from "./components/Stream/Stream";
 
 const tabs = ["Main", "Statistics", "Logs", "Stream", "Data"];
 const API_URL = "http://localhost:8000";
@@ -18,6 +19,7 @@ export default function App() {
   const [singleSensorInsights, setSingleSensorInsights] = useState([]);
   const [combinedSensorInsights, setCombinedSensorInsights] = useState([]);
   const [envReportTimestamp, setEnvReportTimestamp] = useState(null);
+  const [streamUrl, setStreamUrl] = useState(null);
 
   useEffect(() => {
     const savedTab = localStorage.getItem("activeTab");
@@ -125,16 +127,25 @@ export default function App() {
         .catch(() => setCombinedSensorInsights([]));
     };
 
+    const fetchStreamUrl = () => {
+      fetch(`${API_URL}/stream-url`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => setStreamUrl(json?.url || null))
+        .catch(() => setStreamUrl(null));
+    };
+
     fetchData();
     fetchEnvReport();
     fetchSingleSensors();
     fetchCombinedSensors();
+    fetchStreamUrl();
 
     const interval = setInterval(() => {
       fetchData();
       fetchEnvReport();
       fetchSingleSensors();
       fetchCombinedSensors();
+      fetchStreamUrl();
     }, 1000);
 
     return () => clearInterval(interval);
@@ -155,6 +166,7 @@ export default function App() {
           combinedSensorInsights={combinedSensorInsights}
         />
       )}
+      {activeTab === "Stream" && <Stream streamUrl={streamUrl} />}
     </>
   );
 }

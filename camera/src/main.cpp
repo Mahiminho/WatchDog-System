@@ -1,87 +1,61 @@
 #include <WiFi.h>
 #include "esp_camera.h"
-#include "esp_http_server.h"
+#define CAMERA_MODEL_AI_THINKER
+#include "../Camera/camera_pins.h"
+#include "../Camera/camera_index.h"
+#include "HardwareSerial.h"
 
-const char* ssid = "PIXEL";
-const char* password = "20040517";
+#define ESP32_CAM_UART_RX_PIN 2
+#define ESP32_CAM_UART_TX_PIN 15
+#define ESP32_CAM_UART_BAUD_RATE 115200
 
-#define PWDN_GPIO_NUM    -1
-#define RESET_GPIO_NUM   -1
-#define XCLK_GPIO_NUM     0
-#define SIOD_GPIO_NUM    26
-#define SIOC_GPIO_NUM    27
+HardwareSerial extSerial(1);
 
-#define Y9_GPIO_NUM      35
-#define Y8_GPIO_NUM      34
-#define Y7_GPIO_NUM      39
-#define Y6_GPIO_NUM      36
-#define Y5_GPIO_NUM      21
-#define Y4_GPIO_NUM      19
-#define Y3_GPIO_NUM      18
-#define Y2_GPIO_NUM       5
-#define VSYNC_GPIO_NUM   25
-#define HREF_GPIO_NUM    23
-#define PCLK_GPIO_NUM    22
+void startCameraServer();
+void setupLedFlash(int pin);
 
-httpd_handle_t stream_httpd = NULL;
+String ssid = "";
+String password = "";
 
-static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=frame";
-static const char* _STREAM_BOUNDARY = "\r\n--frame\r\n";
-static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
-
-static esp_err_t stream_handler(httpd_req_t* req) {
-  camera_fb_t* fb = NULL;
-  esp_err_t res = ESP_OK;
-  char buf[64];
-
-  res = httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
-  if (res != ESP_OK) return res;
-
+void waitForWiFiCredentials() {
+  // Serial.println("Send WiFi credentials in format: ssid password");
   while (true) {
-    fb = esp_camera_fb_get();
-    if (!fb) {
-      Serial.println("Камера не дала фрейм");
-      res = ESP_FAIL;
+    if (extSerial.available()) { // EXT
+      String input = extSerial.readStringUntil('\n'); // EXT
+      extSerial.println("Camera recieved string."); // EXT
+      input.trim();
+      int spaceIdx = input.indexOf(' ');
+      if (spaceIdx > 0) {
+        ssid = input.substring(0, spaceIdx);
+        password = input.substring(spaceIdx + 1);
+        extSerial.println("WiFi credentials recieved.");
+        // Serial.println("Received SSID: " + ssid);
+        // Serial.println("Received PASSWORD: " + password);
+
+        extSerial.flush(); // EXT
+        while (Serial.available()) { // EXT
+          Serial.read(); // EXT
+        }
+
+        break;
+      }
+      else {
+        extSerial.println("Invalid format.");
+      }
     }
-    else {
-      size_t hlen = snprintf(buf, 64, _STREAM_PART, fb->len);
-      res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
-      res |= httpd_resp_send_chunk(req, buf, hlen);
-      res |= httpd_resp_send_chunk(req, (const char*)fb->buf, fb->len);
-      res |= httpd_resp_send_chunk(req, "\r\n", 2);
-    }
-    esp_camera_fb_return(fb);
-    if (res != ESP_OK) break;
-  }
-
-  return res;
-}
-
-void startCameraServer() {
-  httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  httpd_uri_t stream_uri = {
-    .uri = "/",
-    .method = HTTP_GET,
-    .handler = stream_handler,
-    .user_ctx = NULL
-  };
-
-  if (httpd_start(&stream_httpd, &config) == ESP_OK) {
-    httpd_register_uri_handler(stream_httpd, &stream_uri);
+    delay(100);
   }
 }
 
 void setup() {
-  Serial.begin(115200);
-  WiFi.begin(ssid, password);
-  Serial.print("Підключення до Wi-Fi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.print("IP-адреса: ");
-  Serial.println(WiFi.localIP());
+  // Serial.begin(115200);
+  // Serial.setDebugOutput(true);
+  // Serial.println();
+
+  extSerial.begin(ESP32_CAM_UART_BAUD_RATE, SERIAL_8N1, ESP32_CAM_UART_RX_PIN, ESP32_CAM_UART_TX_PIN);
+  extSerial.setDebugOutput(true);
+  extSerial.println("ESP32-CAM starting..."); // EXT
+  waitForWiFiCredentials();
 
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -98,34 +72,100 @@ void setup() {
   config.pin_pclk = PCLK_GPIO_NUM;
   config.pin_vsync = VSYNC_GPIO_NUM;
   config.pin_href = HREF_GPIO_NUM;
-  config.pin_sscb_sda = SIOD_GPIO_NUM;
-  config.pin_sscb_scl = SIOC_GPIO_NUM;
+  config.pin_sccb_sda = SIOD_GPIO_NUM;
+  config.pin_sccb_scl = SIOC_GPIO_NUM;
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  config.pixel_format = PIXFORMAT_JPEG;
+  config.frame_size = FRAMESIZE_UXGA;
+  config.pixel_format = PIXFORMAT_JPEG; // PIXFORMAT_RGB565 for face detection/recognition
+  config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
+  config.fb_location = CAMERA_FB_IN_PSRAM;
+  config.jpeg_quality = 12;
+  config.fb_count = 1;
 
-  if (psramFound()) {
-    config.frame_size = FRAMESIZE_VGA;
-    config.jpeg_quality = 10;
-    config.fb_count = 2;
+  if (config.pixel_format == PIXFORMAT_JPEG) {
+    if (psramFound()) {
+      config.jpeg_quality = 10;
+      config.fb_count = 2;
+      config.grab_mode = CAMERA_GRAB_LATEST;
+    }
+    else {
+      config.frame_size = FRAMESIZE_SVGA;
+      config.fb_location = CAMERA_FB_IN_DRAM;
+    }
   }
   else {
-    config.frame_size = FRAMESIZE_QVGA;
-    config.jpeg_quality = 12;
-    config.fb_count = 1;
+    config.frame_size = FRAMESIZE_240X240; // best option for face detection/recognition
+#if CONFIG_IDF_TARGET_ESP32S3
+    config.fb_count = 2;
+#endif
   }
 
+#if defined(CAMERA_MODEL_ESP_EYE)
+  pinMode(13, INPUT_PULLUP);
+  pinMode(14, INPUT_PULLUP);
+#endif
+
+  // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    Serial.printf("Помилка ініціалізації камери: 0x%x", err);
+    // Serial.printf("Camera init failed with error 0x%x", err);
     return;
   }
 
+  sensor_t* s = esp_camera_sensor_get();
+  // initial sensors are flipped vertically and colors are a bit saturated
+  if (s->id.PID == OV3660_PID) {
+    s->set_vflip(s, 1); // flip it back
+    s->set_brightness(s, 1); // up the brightness just a bit
+    s->set_saturation(s, -2); // lower the saturation
+  }
+  // drop down frame size for higher initial frame rate
+  if (config.pixel_format == PIXFORMAT_JPEG) {
+    s->set_framesize(s, FRAMESIZE_QVGA);
+  }
+
+#if defined(CAMERA_MODEL_M5STACK_WIDE) || defined(CAMERA_MODEL_M5STACK_ESP32CAM)
+  s->set_vflip(s, 1);
+  s->set_hmirror(s, 1);
+#endif
+
+#if defined(CAMERA_MODEL_ESP32S3_EYE)
+  s->set_vflip(s, 1);
+#endif
+
+  // setup LED FLash if LED pin is defined in camera_pins.h
+#if defined(LED_GPIO_NUM)
+  setupLedFlash(LED_GPIO_NUM);
+#endif
+
+  // Serial.print("WiFi connecting");
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  WiFi.setSleep(false);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    // Serial.print(".");
+  }
+  // Serial.println("");
+  // Serial.println("WiFi connected.");
+
   startCameraServer();
-  Serial.println("Сервер камери запущено");
+
+  // Serial.print("Camera Ready! Use 'http://");
+  // Serial.print(WiFi.localIP());
+  // Serial.println("' to connect to the camera stream.");
+
+  String url = "http://" + WiFi.localIP().toString();
+  // Serial.print("Camera URL: ");
+  // Serial.println(url);
+  extSerial.println(url); // EXT
 }
 
 void loop() {
-  delay(10000);
+  static String url = "http://" + WiFi.localIP().toString();
+  extSerial.println(url); // EXT
+  delay(1000);
 }

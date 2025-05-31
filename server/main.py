@@ -32,8 +32,12 @@ app.add_middleware(
 # MQTT settings
 MQTT_BROKER = "192.168.31.108"
 MQTT_PORT = 1883
-MQTT_TOPIC = "device/sensors/data"
+MQTT_TOPIC_SENSORS = "device/sensors/data"
+MQTT_TOPIC_STREAM = "device/camera/url"
 MQTT_CLIENT_ID = "fastapi-mqtt-server"
+
+# Camera stream URL
+# stream_url: str | None = None
 
 # Ollama model name
 OLLAMA_MODEL = "phi3:latest"
@@ -108,44 +112,50 @@ def on_startup():
 
 def on_connect(client, userdata, flags, rc):
     print("Connected to MQTT broker with result code", rc)
-    client.subscribe(MQTT_TOPIC)
+    client.subscribe(MQTT_TOPIC_SENSORS)
+    client.subscribe(MQTT_TOPIC_STREAM)
 
 def on_message(client, userdata, msg):
     global latest_result, main_asyncio_loop, last_ai_report_time, ai_report_generating
     try:
-        data_dict = json.loads(msg.payload.decode())
-        sensor = SensorData(**data_dict)
+        if msg.topic == MQTT_TOPIC_SENSORS:
+          data_dict = json.loads(msg.payload.decode())
+          sensor = SensorData(**data_dict)
 
-        if latest_result is None:
-            latest_result = SensorAnalysisResult(sensor)
-        else:
-            latest_result.data = sensor
-            latest_result.single_sensor_insights = []
-            latest_result.combined_sensor_insights = []
+          if latest_result is None:
+              latest_result = SensorAnalysisResult(sensor)
+          else:
+              latest_result.data = sensor
+              latest_result.single_sensor_insights = []
+              latest_result.combined_sensor_insights = []
 
-        analyze_single_sensors(sensor, latest_result)
-        analyze_combined_sensors(sensor, latest_result)
+          analyze_single_sensors(sensor, latest_result)
+          analyze_combined_sensors(sensor, latest_result)
 
-        # save to SQLite
-        ts = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")
-        rec = SensorReading(timestamp=ts, **data_dict)
-        with Session(engine) as sess:
-            sess.add(rec)
-            sess.commit()
-        cleanup_database_if_needed()
+          # save to SQLite
+          ts = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")
+          rec = SensorReading(timestamp=ts, **data_dict)
+          with Session(engine) as sess:
+              sess.add(rec)
+              sess.commit()
+          cleanup_database_if_needed()
 
-        print_sensor_data(sensor, latest_result)
+          print_sensor_data(sensor, latest_result)
 
-        now = time.time()
-        if (
-            main_asyncio_loop
-            and main_asyncio_loop.is_running()
-            and now - last_ai_report_time > AI_REPORT_INTERVAL
-            and not ai_report_generating
-        ):
-            ai_report_generating = True
-            last_ai_report_time = now
-            asyncio.run_coroutine_threadsafe(update_ai_report(sensor), main_asyncio_loop)
+          now = time.time()
+          if (
+              main_asyncio_loop
+              and main_asyncio_loop.is_running()
+              and now - last_ai_report_time > AI_REPORT_INTERVAL
+              and not ai_report_generating
+          ):
+              ai_report_generating = True
+              last_ai_report_time = now
+              asyncio.run_coroutine_threadsafe(update_ai_report(sensor), main_asyncio_loop)
+        elif msg.topic == MQTT_TOPIC_STREAM:
+          global stream_url
+          stream_url = msg.payload.decode().strip()
+          print(f"Received stream URL: {stream_url}")
 
     except Exception as e:
         print("Error processing message:", e)
@@ -407,5 +417,12 @@ def get_enviroment_report():
             "timestamp": latest_result.ai_report_time
         }
     return JSONResponse(status_code=404, content={"error": "No report"})
+
+@app.get("/stream-url")
+def get_stream_url():
+    global stream_url
+    if stream_url:
+        return {"url": stream_url}
+    return JSONResponse(status_code=404, content={"error": "No stream URL"})
 
 # uvicorn main:app --host 0.0.0.0 --port 8000

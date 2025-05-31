@@ -29,7 +29,7 @@ void MqttManager::connect() {
     Serial.printf("MQTT Server: %s\n", m_mqttServer);
     Serial.printf("MQTT Port: %d\n", m_mqttPort);
     Serial.printf("Client ID: %s\n", m_mqttClientId);
-    Serial.printf("WiFi Status: %d\n", WiFi.status() == WL_CONNECTED ? "Connected" : "Something wrong with WiFi");
+    Serial.printf("WiFi Status: %s\n", WiFi.status() == WL_CONNECTED ? "Connected" : "Something wrong with WiFi");
     Serial.printf("Local IP: %s\n", WiFi.localIP().toString().c_str());
 
     if (!m_wifiClient.connect(m_mqttServer, m_mqttPort)) { // check if the client can connect to the broker
@@ -106,4 +106,9 @@ bool MqttManager::sendJson(const String& jsonPayload) {
     Serial.println("Failed.");
     return false;
   }
+}
+
+bool MqttManager::sendRaw(const String& payload, const char* topic) {
+  if (!m_mqttClient.connected()) return false;
+  return m_mqttClient.publish(topic, payload.c_str(), true);
 }

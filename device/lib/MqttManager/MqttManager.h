@@ -17,6 +17,7 @@ public:
   void begin();
   bool sendJson(const String& jsonPayload);
   bool isConnected();
+  bool sendRaw(const String& payload, const char* topic);
 
 private:
   void connect();
