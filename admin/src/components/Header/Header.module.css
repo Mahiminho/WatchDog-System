@@ -45,7 +45,7 @@
   transform: translateX(-50%);
 }
 
-.helpButton {
+.cleanButton {
   width: 2em;
   height: 2em;
   background-color: #1e90ff;
@@ -58,7 +58,7 @@
   transition: background-color 0.3s;
 }
 
-.helpButton:hover {
+.cleanButton:hover {
   background-color: #63b3ed;
 }
 
@@ -67,4 +67,120 @@
   align-items: center;
   height: 100%;
   width: auto;
+}
+
+.settingsModal {
+  margin-top: 12vh;
+  margin-right: 1.5em;
+  background: #232323;
+  border-radius: 0.5em;
+  box-shadow: 0 4px 24px #0008;
+  padding: 1.2em 1.5em 1.2em 1.5em;
+  min-width: 260px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+}
+
+.settingsModalBackdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: transparent;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.2em;
+  border-radius: 0.4em;
+  padding: 0.2em 0.7em;
+  background: transparent !important;
+}
+
+.switchLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  color: #fff;
+  font-size: 1.2em;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.switchIcon {
+  display: flex;
+  align-items: center;
+}
+
+.switchEye {
+  width: 2em;
+  height: 1.2em;
+  border-radius: 0.5em;
+  background: #444;
+  position: relative;
+  margin-right: 0.5em;
+  transition: background 0.2s;
+  cursor: pointer;
+  border: 2px solid #232323;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+.switchEye::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 50%;
+  background: #bbb;
+  transition: left 0.2s, background 0.2s;
+  left: 0.1em;
+}
+.switchOn {
+  background: #1e90ff;
+}
+.switchOn::before {
+  left: 1em;
+  background: #fff;
+}
+.switchOff {
+  background: #444;
+}
+.switchOff::before {
+  left: 0.1em;
+  background: #bbb;
+}
+
+.clearStorageBtn {
+  margin-top: 0.7em;
+  width: 100%;
+  background: #1e90ff;
+  color: #fff;
+  border: none;
+  border-radius: 0.4em;
+  padding: 0.6em 0;
+  font-size: 1.1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.clearStorageBtn:hover {
+  background: #63b3ed;
+  cursor: pointer;
+}
+
+.switchRow,
+.switchLabel,
+.switchIcon {
+  background: transparent !important;
 }

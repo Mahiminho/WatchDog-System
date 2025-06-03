@@ -1,7 +1,12 @@
 import wdsLogo from "../../assets/wds-logo.svg";
 import styles from "./Header.module.css";
 
-export default function Header({ activeTab, setActiveTab, tabs }) {
+export default function Header({
+  activeTab,
+  setActiveTab,
+  tabs,
+  onShowSettings,
+}) {
   return (
     <>
       <header className={styles.header}>
@@ -19,7 +24,9 @@ export default function Header({ activeTab, setActiveTab, tabs }) {
             </button>
           ))}
         </nav>
-        <button className={styles.helpButton}>?</button>
+        <button className={styles.cleanButton} onClick={onShowSettings}>
+          !
+        </button>
       </header>
     </>
   );

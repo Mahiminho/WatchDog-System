@@ -77,7 +77,9 @@ export default function Main({ data, insights }) {
                     pointerEvents: "none",
                   }}
                 >
-                  {card.insight}
+                  {typeof card.insight === "object"
+                    ? card.insight.text
+                    : card.insight}
                 </div>
               )}
             </div>

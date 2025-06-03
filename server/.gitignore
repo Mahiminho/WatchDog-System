@@ -3,3 +3,5 @@ reserve.txt
 __pycache__
 .vscode
 sensor_data.json
+IDEAL_RESERVE.txt
+sensor_data.db

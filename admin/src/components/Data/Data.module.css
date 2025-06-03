@@ -1,0 +1,540 @@
+.dataRoot {
+  width: 100%;
+  height: calc(100vh - 10vh - 2px);
+  display: flex;
+  flex-direction: column;
+  background: #2e2e2e;
+  color: #f0f0f0;
+  font-family: "Fira Mono", monospace;
+}
+
+.rangePanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 0 18px 0;
+  border-bottom: 5px solid #252525;
+  background: #2e2e2e;
+  z-index: 2;
+  border-radius: 12px 12px 0 0;
+}
+
+.rangeRow {
+  display: flex;
+  align-items: center;
+  gap: 2em;
+  margin-bottom: 10px;
+}
+
+.rangeRow label {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #f0f0f0;
+  margin-right: 0.7em;
+}
+
+.rangeDash {
+  font-size: 2.2em;
+  font-weight: 700;
+  color: #f0f0f0;
+  margin: 0 1.2em;
+  letter-spacing: 0.2em;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.rangeRow input[type="date"],
+.rangeRow input[type="time"] {
+  background: #232323;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 1.3em;
+  font-family: inherit;
+  margin-right: 0.5em;
+  outline: none;
+  transition: border 0.2s;
+}
+
+.rangeRow input[type="date"]::-webkit-calendar-picker-indicator,
+.rangeRow input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.rangeRow input[type="date"]::placeholder,
+.rangeRow input[type="time"]::placeholder {
+  color: #bbb;
+  opacity: 1;
+}
+
+.rangeRow input[type="date"]::-moz-placeholder,
+.rangeRow input[type="time"]::-moz-placeholder {
+  color: #bbb;
+  opacity: 1;
+}
+.rangeRow input[type="date"]:focus,
+.rangeRow input[type="time"]:focus {
+  border: 1.5px solid #2e8bff;
+}
+
+.getButton {
+  margin-top: 0.5em;
+  padding: 14px 38px;
+  background: #2e8bff;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.4em;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+  font-weight: 700;
+  box-shadow: 0 2px 8px #0002;
+  letter-spacing: 0.04em;
+}
+.getButton:disabled {
+  background: #e0e0e0 !important;
+  color: #b0b0b0 !important;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.getButton:not(:disabled):hover {
+  background: #50aaff;
+  color: #fff;
+  box-shadow: 0 4px 16px #2e8bff44;
+}
+
+.noDataPopup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(46, 46, 46, 0.92);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.noDataBox {
+  background: #232323;
+  border-radius: 1em;
+  padding: 2.5em 3em 2em 3em;
+  box-shadow: 0 2px 16px #000a;
+  position: relative;
+  min-width: 320px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.noDataText {
+  background: #232323;
+  color: #fff;
+  font-size: 1.3em;
+  text-align: center;
+  margin-top: 0.5em;
+}
+.closeBtn {
+  position: absolute;
+  top: 0.1em;
+  right: 0.2em;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 2em;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.closeBtn:hover {
+  opacity: 1;
+}
+
+.contentWrap {
+  flex: 1;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  background: #2e2e2e;
+}
+
+.left {
+  min-width: 220px;
+  max-width: 70vw;
+  background: #2e2e2e;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 10px 10px 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: width 0.2s;
+}
+
+.sensorTabs {
+  display: flex;
+  gap: 0.3em;
+  padding: 6px 8px 0 8px;
+  background: #232323;
+  border-radius: 16px 16px 0 0;
+}
+
+.sensorTab,
+.sensorTabActive {
+  font-size: 0.95em;
+  padding: 5px 14px;
+  border: none;
+  background: transparent;
+  color: #bbb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-weight: 500;
+}
+
+.sensorTabActive {
+  background: #2e8bff;
+  color: #fff;
+}
+
+.sensorTab:hover:not(.sensorTabActive) {
+  background: #2e8bff33;
+  color: #fff;
+}
+
+.chartBox {
+  flex: 1;
+  min-height: 220px;
+  height: 100%;
+  /* background: #232323; */
+  border-radius: 12px;
+  padding: 12px 10px 10px 10px;
+  margin-top: 8px;
+  box-shadow: 0 2px 8px #0005;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dragBarX {
+  width: 8px;
+  background: #222;
+  cursor: ew-resize;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: unset;
+  border-radius: 6px;
+  box-shadow: 0 0 4px #000a;
+  transition: background 0.2s;
+}
+.dragBarX:hover {
+  background: #2e8bff;
+}
+
+.right {
+  min-width: 220px;
+  background: #2e2e2e;
+  padding: 18px 10px 10px 10px;
+  box-sizing: border-box;
+  overflow: auto;
+  transition: width 0.2s;
+}
+
+.tableWrap {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: #232323;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px #0005;
+  padding: 0 10px 10px 10px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  font-size: 1em;
+  min-width: 700px;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: #232323;
+  color: #fff;
+  padding: 18px 12px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.table tbody td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #222;
+  text-align: center;
+  background: #232323;
+  transition: background 0.15s;
+}
+
+.table tbody tr:hover td,
+.cellHover {
+  background: #2e8bff11 !important;
+}
+
+.table tbody td:hover,
+.cellHover {
+  background: #2e8bff11 !important;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tableEmpty {
+  color: #bbb;
+  font-size: 2.8em;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  display: inline-block;
+  margin: 0 auto;
+  box-shadow: none;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.dragBarX {
+  width: 6px;
+  cursor: ew-resize;
+  background: #444;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: unset;
+  border-radius: 0;
+  box-shadow: none;
+  transition: background 0.2s;
+}
+.dragBarX:hover {
+  background: #2e8bff;
+}
+
+.datePicker {
+  background: #232323 !important;
+  color: #fff !important;
+  border: 1px solid #fff !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  font-size: 0.9em !important;
+  font-family: inherit !important;
+  margin-right: 0.5em;
+  outline: none;
+  width: 180px;
+}
+
+.react-datepicker {
+  z-index: 99 !important;
+  position: fixed !important;
+}
+
+.no-pointer-events * {
+  pointer-events: none !important;
+}
+.left {
+  min-width: 220px;
+  max-width: 70vw;
+  background: #2e2e2e;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 10px 10px 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.chartBoxCard {
+  width: 100%;
+  height: 100%;
+  background: #232323;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px #000a;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 10px 10px 10px;
+  box-sizing: border-box;
+}
+
+.sensorTabs {
+  display: flex;
+  gap: 0.5em;
+  padding: 8px 10px 0 10px;
+  background: #232323;
+  border-radius: 12px 12px 0 0;
+}
+
+.sensorTab,
+.sensorTabActive {
+  font-size: 1em;
+  padding: 7px 18px;
+  border: none;
+  background: transparent;
+  color: #bbb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-weight: 500;
+}
+
+.sensorTabActive {
+  background: #2e8bff;
+  color: #fff;
+}
+
+.sensorTab:hover:not(.sensorTabActive) {
+  background: #2e8bff33;
+  color: #fff;
+}
+
+.chartBoxCard,
+.chartBoxCard * {
+  scrollbar-width: thin;
+  scrollbar-color: #444 #232323;
+}
+
+.chartBoxCard::-webkit-scrollbar,
+.chartBoxCard *::-webkit-scrollbar {
+  width: 6px;
+  background: #232323;
+}
+.chartBoxCard::-webkit-scrollbar-thumb,
+.chartBoxCard *::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 6px;
+}
+
+.tableWrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.table {
+  width: 100%;
+  height: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  font-size: 1em;
+  min-width: 700px;
+  table-layout: fixed;
+}
+
+.table tbody {
+  height: 100%;
+  width: 100%;
+  display: table-row-group;
+}
+
+.table tbody tr.noDataRow {
+  height: 100%;
+}
+
+.table tbody tr.noDataRow td {
+  height: 400px;
+  padding: 0;
+}
+
+.tableEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #bbb;
+  font-size: 2.8em;
+  background: transparent;
+  box-shadow: none;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+}
+
+.table tbody tr.noDataRow,
+.table tbody tr.noDataRow td,
+.table tbody tr.noDataRow:hover td,
+.table tbody tr.noDataRow td:hover,
+.tableEmpty,
+.tableEmpty:hover {
+  background: #232323 !important;
+  color: #bbb !important;
+  cursor: default !important;
+  box-shadow: none !important;
+  outline: none !important;
+  user-select: none;
+}
+
+.tableWrap::-webkit-scrollbar {
+  width: 8px;
+  background: #797c8155;
+}
+
+.tableWrap::-webkit-scrollbar-thumb {
+  background: #797c8155;
+  border-radius: 6px;
+}
+
+.tableWrap::-webkit-scrollbar-thumb:hover {
+  background: #797c8155;
+}
+
+.tableWrap {
+  scrollbar-width: thin;
+  scrollbar-color: #797c8155 #181c23;
+}
+
+.table thead {
+  position: sticky;
+  top: 0;
+}
+
+.table thead::after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: #2e8bff;
+  pointer-events: none;
+}
+
+.chartTooltip {
+  background: #2e2e2e;
+  color: #fff;
+  padding: 0.7em 1.2em;
+  border-radius: 0.5em;
+  font-size: 1em;
+  white-space: pre-line;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: none;
+}
+
+.chartNoData {
+  font-size: 2.8em;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-align: center;
+}

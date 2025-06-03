@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import paho.mqtt.client as mqtt
@@ -16,8 +16,13 @@ import time
 
 main_asyncio_loop = None
 last_ai_report_time = 0
-AI_REPORT_INTERVAL = 60
+AI_REPORT_INTERVAL = 60 # seconds
 ai_report_generating = False
+
+SENSOR_DATA_TIMEOUT = 20 # seconds 
+
+last_sensor_data_time = 0
+stream_url = None
 
 app = FastAPI()
 
@@ -35,9 +40,6 @@ MQTT_PORT = 1883
 MQTT_TOPIC_SENSORS = "device/sensors/data"
 MQTT_TOPIC_STREAM = "device/camera/url"
 MQTT_CLIENT_ID = "fastapi-mqtt-server"
-
-# Camera stream URL
-# stream_url: str | None = None
 
 # Ollama model name
 OLLAMA_MODEL = "phi3:latest"
@@ -109,16 +111,16 @@ def on_startup():
     threading.Thread(target=start_mqtt, daemon=True).start()
     main_asyncio_loop = asyncio.get_event_loop()
     
-
 def on_connect(client, userdata, flags, rc):
     print("Connected to MQTT broker with result code", rc)
     client.subscribe(MQTT_TOPIC_SENSORS)
     client.subscribe(MQTT_TOPIC_STREAM)
 
 def on_message(client, userdata, msg):
-    global latest_result, main_asyncio_loop, last_ai_report_time, ai_report_generating
+    global latest_result, main_asyncio_loop, last_ai_report_time, ai_report_generating, last_sensor_data_time
     try:
         if msg.topic == MQTT_TOPIC_SENSORS:
+          last_sensor_data_time = time.time()
           data_dict = json.loads(msg.payload.decode())
           sensor = SensorData(**data_dict)
 
@@ -396,21 +398,27 @@ def get_latest_sensor_data():
 
 @app.get("/single-sensors-results")
 def get_single_sensors_results():
-    global latest_result
+    global latest_result, last_sensor_data_time
+    if time.time() - last_sensor_data_time > SENSOR_DATA_TIMEOUT:
+        return JSONResponse(status_code=404, content={"error": "No data more than 20 seconds"})
     if latest_result:
         return {"single_sensor_insights": latest_result.single_sensor_insights}
     return JSONResponse(status_code=404, content={"error": "No data"})
 
 @app.get("/combined-sensors-results")
 def get_combined_sensors_results():
-    global latest_result
+    global latest_result, last_sensor_data_time
+    if time.time() - last_sensor_data_time > SENSOR_DATA_TIMEOUT:
+        return JSONResponse(status_code=404, content={"error": "No data more than 20 seconds"})
     if latest_result:
         return {"combined_sensor_insights": latest_result.combined_sensor_insights}
     return JSONResponse(status_code=404, content={"error": "No data"})
 
 @app.get("/enviroment-report")
 def get_enviroment_report():
-    global latest_result
+    global latest_result, last_sensor_data_time
+    if time.time() - last_sensor_data_time > SENSOR_DATA_TIMEOUT:
+        return JSONResponse(status_code=404, content={"error": "No data more than 20 seconds"})
     if latest_result and latest_result.ai_report:
         return {
             "ai_report": latest_result.ai_report,
@@ -424,5 +432,35 @@ def get_stream_url():
     if stream_url:
         return {"url": stream_url}
     return JSONResponse(status_code=404, content={"error": "No stream URL"})
+
+@app.get("/sensors-range")
+def get_sensors_range(
+    timestamp1: str = Query(..., description="Start time YYYY/MM/DD HH:MM:SS"),
+    timestamp2: str = Query(..., description="End time YYYY/MM/DD HH:MM:SS"),
+):
+    try:
+        t1 = datetime.datetime.strptime(timestamp1, "%Y/%m/%d %H:%M:%S")
+        t2 = datetime.datetime.strptime(timestamp2, "%Y/%m/%d %H:%M:%S")
+    except Exception:
+        return JSONResponse(status_code=404, content={"error": "Wrong time format, use YYYY/MM/DD HH:MM:SS"})
+    if t1 > t2:
+        return JSONResponse(status_code=404, content={"error": "Start time must be before end time"})
+    
+    records = get_sensor_data_by_time(timestamp1, timestamp2)
+    if not records:
+        return JSONResponse(status_code=404, content={"error": "No data"})
+
+    result = {
+        "timestamps": [r.timestamp for r in records],
+        "temperature": [r.temperature for r in records],
+        "airPPM": [r.airPPM for r in records],
+        "lightLux": [r.lightLux for r in records],
+        "presence": [r.presence for r in records],
+        "presenceDistance": [r.presenceDistance for r in records],
+        "motion": [r.motion for r in records],
+        "noiseDB": [r.noiseDB for r in records],
+        "vibration": [r.vibration for r in records],
+    }
+    return result
 
 # uvicorn main:app --host 0.0.0.0 --port 8000

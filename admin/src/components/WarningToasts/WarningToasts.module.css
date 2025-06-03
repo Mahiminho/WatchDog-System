@@ -1,0 +1,67 @@
+.toastContainer {
+  position: fixed;
+  right: 2vw;
+  bottom: 2vw;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7em;
+  pointer-events: none;
+}
+.toast {
+  background: #353535;
+  border-radius: 0.5em;
+  box-shadow: 0 2px 8px #0005;
+  color: #fff;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  min-width: 350px;
+  padding: 0.9em 1.6em 0.9em 1.2em;
+  margin-bottom: 0.2em;
+  font-size: 1em;
+  pointer-events: all;
+  transition: background 0.2s;
+}
+.toast:hover {
+  background: #444;
+}
+.icon {
+  width: 2.3em;
+  height: 2.3em;
+  background: #e53935;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.6em;
+}
+.exMark {
+  color: #fff;
+  font-size: 1.8em;
+  font-weight: 1200;
+  font-family: "Arial Black", Arial, sans-serif;
+  background: transparent !important;
+  letter-spacing: -0.05em;
+}
+.text {
+  flex: 1;
+  font-weight: 1000;
+  font-family: "Arial Black", Arial, sans-serif;
+  background: transparent !important;
+  font-size: 1.2em;
+  letter-spacing: 0.01em;
+}
+.closeBtn {
+  background: none;
+  border: none;
+  color: #bbb;
+  font-size: 1.7em;
+  margin-left: 0.5em;
+  cursor: pointer;
+  font-weight: bold;
+  transition: color 0.2s;
+}
+.closeBtn:hover {
+  color: #fff;
+}

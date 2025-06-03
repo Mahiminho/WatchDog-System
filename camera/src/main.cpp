@@ -18,29 +18,26 @@ String ssid = "";
 String password = "";
 
 void waitForWiFiCredentials() {
-  // Serial.println("Send WiFi credentials in format: ssid password");
+  extSerial.println("Wait for WiFI credentials...");
   while (true) {
-    if (extSerial.available()) { // EXT
-      String input = extSerial.readStringUntil('\n'); // EXT
-      extSerial.println("Camera recieved string."); // EXT
+    if (extSerial.available()) {
+      String input = extSerial.readStringUntil('\n');
+      extSerial.println("ESP32-CAM recieved string: " + input);
       input.trim();
       int spaceIdx = input.indexOf(' ');
       if (spaceIdx > 0) {
         ssid = input.substring(0, spaceIdx);
         password = input.substring(spaceIdx + 1);
         extSerial.println("WiFi credentials recieved.");
-        // Serial.println("Received SSID: " + ssid);
-        // Serial.println("Received PASSWORD: " + password);
-
-        extSerial.flush(); // EXT
-        while (Serial.available()) { // EXT
-          Serial.read(); // EXT
+        extSerial.flush();
+        while (Serial.available()) {
+          Serial.read();
         }
 
         break;
       }
       else {
-        extSerial.println("Invalid format.");
+        extSerial.println("Invalid format of WiFi credentials.");
       }
     }
     delay(100);
@@ -48,13 +45,11 @@ void waitForWiFiCredentials() {
 }
 
 void setup() {
-  // Serial.begin(115200);
-  // Serial.setDebugOutput(true);
-  // Serial.println();
+  delay(30000); // give 30 sec for ESP-WROOM-32 to boot and start
 
   extSerial.begin(ESP32_CAM_UART_BAUD_RATE, SERIAL_8N1, ESP32_CAM_UART_RX_PIN, ESP32_CAM_UART_TX_PIN);
   extSerial.setDebugOutput(true);
-  extSerial.println("ESP32-CAM starting..."); // EXT
+  extSerial.println("ESP32-CAM stared.");
   waitForWiFiCredentials();
 
   camera_config_t config;
@@ -78,7 +73,7 @@ void setup() {
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
   config.frame_size = FRAMESIZE_UXGA;
-  config.pixel_format = PIXFORMAT_JPEG; // PIXFORMAT_RGB565 for face detection/recognition
+  config.pixel_format = PIXFORMAT_JPEG;
   config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
   config.fb_location = CAMERA_FB_IN_PSRAM;
   config.jpeg_quality = 12;
@@ -96,7 +91,7 @@ void setup() {
     }
   }
   else {
-    config.frame_size = FRAMESIZE_240X240; // best option for face detection/recognition
+    config.frame_size = FRAMESIZE_240X240;
 #if CONFIG_IDF_TARGET_ESP32S3
     config.fb_count = 2;
 #endif
@@ -110,7 +105,7 @@ void setup() {
   // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    // Serial.printf("Camera init failed with error 0x%x", err);
+    extSerial.printf("Camera init failed with error 0x%x", err);
     return;
   }
 
@@ -145,27 +140,22 @@ void setup() {
   WiFi.begin(ssid, password);
   WiFi.setSleep(false);
 
+  extSerial.print("Connecting to WiFi...");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    // Serial.print(".");
   }
-  // Serial.println("");
-  // Serial.println("WiFi connected.");
 
+  extSerial.println("WiFi connected.");
+  extSerial.print("Starting camera server...");
   startCameraServer();
 
-  // Serial.print("Camera Ready! Use 'http://");
-  // Serial.print(WiFi.localIP());
-  // Serial.println("' to connect to the camera stream.");
-
   String url = "http://" + WiFi.localIP().toString();
-  // Serial.print("Camera URL: ");
-  // Serial.println(url);
-  extSerial.println(url); // EXT
+  extSerial.println(url);
+  delay(1000);
 }
 
 void loop() {
   static String url = "http://" + WiFi.localIP().toString();
-  extSerial.println(url); // EXT
+  extSerial.println(url);
   delay(1000);
 }

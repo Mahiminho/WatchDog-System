@@ -27,7 +27,7 @@
 
 // TODO:
 // !) FIX THE AUDIO CLASS
-// !!) ADD MY FREE ROUTER SETTINGS
+// !!) ADD MY FREE ROUTER SETTINGS OR even local site for enter WiFi settings
 // !!!) Google how potentiometers works on MQ-135 and SW-420 to set the best sensitivity. Probably set better sensitivity for SR501
 // 0) Reconfig LD2420 to more channels for bigger diapason of detection
 // 1) Add functional, for getting data on second UART: just get URL and HTTP request to UI
